@@ -16,10 +16,11 @@
 </style>
 </head>
 <body>
-<div id="app"></div>
+<div id="app"><main class="profile-screen"><section class="profile-box"><div class="profile-brand"><i>✓</i>FamilyFlow</div><h1>Loading FamilyFlow…</h1><p>Please wait while your family dashboard loads.</p></section></main></div>
 <div id="modal" class="modal" hidden></div>
 <div id="toast" class="toast hide"></div>
 <script>
+window.addEventListener("error",function(e){var a=document.getElementById("app");if(a&&!a.innerHTML.trim()){a.innerHTML="<main class=\"profile-screen\"><section class=\"profile-box\"><h1>FamilyFlow error</h1><p class=\"desc\">"+String(e.message||"Unable to start the app. Please refresh.")+"</p></section></main>"}});
 (()=> {
   const SB_URL='https://jsjiysgwymeuugjipyil.supabase.co';
   const SB_KEY='sb_publishable_NGo65OXNEWzmJqSBy9KGuw_kwFQMDAq';
