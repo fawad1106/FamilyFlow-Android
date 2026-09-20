@@ -1,0 +1,1559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1f5c4a">
+  <meta name="description" content="A shared task manager for the family, with a private space for each person.">
+  <title>Family Tasks</title>
+  <style>
+/* ==========================================================================
+   Family Task Manager — style.css
+   Mobile-first. Light + dark themes via CSS custom properties.
+   Sections: 1 Tokens · 2 Base · 3 Layout · 4 Components · 5 Views · 6 Dialogs
+   ========================================================================== */
+
+/* 1. TOKENS -------------------------------------------------------------- */
+:root {
+  --bg: #f3f5ef;
+  --surface: #ffffff;
+  --surface-2: #eaeee6;
+  --ink: #16221e;
+  --ink-2: #47564f;
+  --ink-3: #6f7e77;
+  --line: #dce2d8;
+
+  --brand: #1f5c4a;
+  --brand-ink: #ffffff;
+  --brand-soft: #dcebe3;
+  --hero-bg: #1f5c4a;
+  --hero-ink: #ffffff;
+  --hero-ink-2: rgba(255, 255, 255, 0.74);
+  --hero-track: rgba(255, 255, 255, 0.14);
+
+  --high: #b23a30;
+  --high-soft: #f8e1de;
+  --medium: #9a6708;
+  --medium-soft: #f8ecd0;
+  --low: #4a5f86;
+  --low-soft: #e2e8f3;
+  --danger: #b23a30;
+
+  --shadow-1: 0 1px 2px rgba(22, 34, 30, 0.06), 0 1px 1px rgba(22, 34, 30, 0.04);
+  --shadow-2: 0 10px 30px rgba(22, 34, 30, 0.14);
+
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 22px;
+
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --nav-h: 66px;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0e1613;
+  --surface: #16211d;
+  --surface-2: #1e2c27;
+  --ink: #e7eee9;
+  --ink-2: #aab9b2;
+  --ink-3: #80918a;
+  --line: #2a3a34;
+
+  --brand: #62c4a0;
+  --brand-ink: #0a1410;
+  --brand-soft: #1a3a2f;
+  --hero-bg: #173a30;
+  --hero-ink: #f1f7f3;
+
+  --high: #f0877d;
+  --high-soft: #3b1f1d;
+  --medium: #e6b34f;
+  --medium-soft: #372b12;
+  --low: #97aedb;
+  --low-soft: #1f2a40;
+  --danger: #f0877d;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 10px 30px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+/* 2. BASE ---------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-tap-highlight-color: transparent;
+}
+h1, h2, h3, p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+ul { list-style: none; margin: 0; padding: 0; }
+svg { display: block; flex-shrink: 0; }
+:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; border-radius: 6px; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+[hidden] { display: none !important; }
+
+/* 3. LAYOUT -------------------------------------------------------------- */
+.shell { min-height: 100dvh; }
+.shell > div { min-width: 0; }
+.main {
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px
+           calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 28px);
+  max-width: 980px;
+  margin: 0 auto;
+}
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.01em; }
+.brand-mark { width: 30px; height: 30px; border-radius: 9px; background: var(--brand); color: var(--brand-ink); display: grid; place-items: center; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
+
+.sidebar { display: none; }
+
+.bottom-nav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  display: grid; grid-template-columns: repeat(6, 1fr);
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -6px 24px rgba(22, 34, 30, 0.06);
+}
+.nav-item {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  min-height: 50px; padding: 4px 2px; border: 0; background: transparent; border-radius: var(--r-sm);
+  color: var(--ink-3); font-size: 11px; font-weight: 600; text-decoration: none;
+  transition: color 0.15s, background 0.15s;
+}
+.nav-item .nav-full { display: none; }
+.nav-item[aria-current="page"] { color: var(--brand); }
+.nav-item[aria-current="page"] .nav-ico { background: var(--brand-soft); }
+.nav-ico { width: 44px; height: 26px; border-radius: 13px; display: grid; place-items: center; transition: background 0.15s; }
+
+@media (min-width: 900px) {
+  .shell { display: grid; grid-template-columns: 264px 1fr; }
+  .bottom-nav, .topbar-mobile { display: none; }
+  .main { padding: 32px 36px 48px; width: 100%; }
+  .sidebar {
+    display: flex; flex-direction: column; gap: 18px;
+    position: sticky; top: 0; height: 100dvh; padding: 24px 16px;
+    background: var(--surface); border-right: 1px solid var(--line);
+  }
+  .sidebar .nav-list { display: flex; flex-direction: column; gap: 4px; }
+  .sidebar .nav-item {
+    flex-direction: row; justify-content: flex-start; gap: 12px; padding: 10px 12px;
+    font-size: 15px; min-height: 44px;
+  }
+  .sidebar .nav-item .nav-short { display: none; }
+  .sidebar .nav-item .nav-full { display: inline; }
+  .sidebar .nav-ico { width: 30px; height: 30px; border-radius: 9px; }
+  .sidebar .nav-item[aria-current="page"] { background: var(--brand-soft); }
+  .sidebar .nav-item[aria-current="page"] .nav-ico { background: transparent; }
+  .sidebar-foot { margin-top: auto; }
+}
+
+/* 4. COMPONENTS ---------------------------------------------------------- */
+.avatar {
+  width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+  display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 18px;
+  background: var(--c, var(--brand));
+}
+.avatar.sm { width: 32px; height: 32px; font-size: 14px; }
+.avatar.lg { width: 64px; height: 64px; font-size: 26px; }
+
+.icon-btn {
+  width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink-2); display: grid; place-items: center;
+  transition: background 0.15s, color 0.15s;
+}
+.icon-btn:hover { background: var(--surface-2); color: var(--ink); }
+.icon-btn.plain { border-color: transparent; background: transparent; width: 40px; height: 40px; }
+.icon-btn.danger:hover { color: var(--danger); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 46px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink); font-weight: 600;
+  transition: background 0.15s, transform 0.1s;
+}
+.btn:hover { background: var(--surface-2); }
+.btn:active { transform: scale(0.98); }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--brand); }
+.btn.block { width: 100%; }
+.btn.sm { min-height: 38px; padding: 0 14px; font-size: 14px; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 999px;
+  font-size: 12px; font-weight: 600; background: var(--surface-2); color: var(--ink-2); white-space: nowrap;
+}
+.badge.high { background: var(--high-soft); color: var(--high); }
+.badge.medium { background: var(--medium-soft); color: var(--medium); }
+.badge.low { background: var(--low-soft); color: var(--low); }
+.badge.overdue { background: var(--high-soft); color: var(--high); }
+.badge.soon { background: var(--medium-soft); color: var(--medium); }
+.badge.who { background: color-mix(in srgb, var(--c) 15%, var(--surface)); color: var(--ink); }
+.badge.who::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
+  box-shadow: var(--shadow-1); padding: 16px;
+}
+.section-title { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 26px 0 12px; }
+.muted { color: var(--ink-2); }
+.small { font-size: 13px; }
+
+.page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.page-title { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+.page-sub { color: var(--ink-2); margin-top: 4px; }
+.lock-note {
+  display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: var(--r-md);
+  background: var(--medium-soft); color: var(--ink); font-size: 14px; margin-bottom: 16px;
+}
+.lock-note svg { color: var(--medium); margin-top: 2px; }
+.lock-note button { border: 0; background: none; padding: 0; color: var(--brand); font-weight: 700; text-decoration: underline; }
+
+/* form controls */
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.field > label, .field > .label { font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.input, .select, .textarea {
+  width: 100%; min-height: 46px; padding: 10px 14px; border-radius: var(--r-sm);
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+.textarea { min-height: 88px; resize: vertical; }
+.input:focus, .select:focus, .textarea:focus { outline: 3px solid color-mix(in srgb, var(--brand) 40%, transparent); border-color: var(--brand); }
+.search { position: relative; }
+.search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--ink-3); pointer-events: none; }
+.search .input { padding-left: 42px; border-radius: 999px; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; background: var(--surface-2); border-radius: 999px; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label {
+  display: grid; place-items: center; min-height: 40px; border-radius: 999px; font-weight: 600; font-size: 14px;
+  color: var(--ink-2); cursor: pointer; transition: background 0.15s, color 0.15s;
+}
+.seg input:checked + label { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-1); }
+.seg input:focus-visible + label { outline: 3px solid var(--brand); outline-offset: 1px; }
+
+.filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0 16px; }
+.filters .select { min-height: 42px; font-size: 14px; padding: 6px 12px; }
+@media (min-width: 640px) { .filters { grid-template-columns: repeat(4, 1fr); } }
+
+/* empty state */
+.empty { text-align: center; padding: 40px 20px; border: 1.5px dashed var(--line); border-radius: var(--r-lg); color: var(--ink-2); }
+.empty .empty-ico { width: 56px; height: 56px; margin: 0 auto 12px; border-radius: 50%; display: grid; place-items: center; background: var(--brand-soft); color: var(--brand); }
+.empty h3 { font-size: 17px; color: var(--ink); margin-bottom: 4px; }
+.empty .btn { margin-top: 16px; }
+
+/* toasts */
+#toasts { position: fixed; left: 0; right: 0; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 16px); z-index: 60; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; padding: 0 16px; }
+.toast { background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: 14px; font-weight: 600; box-shadow: var(--shadow-2); animation: toast-in 0.22s ease-out; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (min-width: 900px) { #toasts { bottom: 24px; } }
+
+/* 5. VIEWS --------------------------------------------------------------- */
+
+/* profile picker (lock screen) */
+.picker { min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; max-width: 560px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 24px) 20px calc(env(safe-area-inset-bottom, 0px) + 24px); }
+.picker h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; margin: 18px 0 6px; }
+.picker-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 22px; }
+@media (min-width: 520px) { .picker-grid { grid-template-columns: repeat(3, 1fr); } }
+.pick {
+  display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 18px 10px 14px;
+  border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--shadow-1);
+  transition: transform 0.12s, border-color 0.15s;
+}
+.pick:hover { border-color: var(--c); }
+.pick:active { transform: scale(0.97); }
+.pick strong { font-size: 16px; }
+.pick .lock-state { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--ink-3); }
+.picker-foot { margin-top: 22px; font-size: 13px; color: var(--ink-3); }
+
+/* dashboard hero */
+.hero {
+  background: var(--hero-bg); color: var(--hero-ink); border-radius: var(--r-lg);
+  padding: 22px 20px; display: grid; gap: 18px; overflow: hidden; position: relative;
+}
+.hero h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.12; }
+.hero .hero-date { color: var(--hero-ink-2); font-size: 14px; margin-bottom: 6px; }
+.hero .hero-line { color: var(--hero-ink-2); margin-top: 8px; max-width: 34ch; }
+.ring-wrap { display: flex; align-items: center; gap: 18px; }
+.ring { position: relative; width: 148px; height: 148px; flex-shrink: 0; }
+.ring svg { width: 100%; height: 100%; }
+.ring-center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.ring-center strong { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+.ring-center span { font-size: 11px; color: var(--hero-ink-2); margin-top: 2px; }
+.ring-legend { display: grid; gap: 6px; font-size: 13px; flex: 1; min-width: 0; }
+.ring-legend li { display: flex; align-items: center; gap: 8px; color: var(--hero-ink-2); }
+.ring-legend i { width: 9px; height: 9px; border-radius: 50%; background: var(--t); flex-shrink: 0; }
+.ring-legend b { color: var(--hero-ink); font-weight: 600; }
+.ring-legend em { margin-left: auto; font-style: normal; font-variant-numeric: tabular-nums; }
+@media (min-width: 720px) { .hero { grid-template-columns: 1fr auto; align-items: center; padding: 28px; } .hero h1 { font-size: 34px; } }
+.ring-arc { animation: ring-in 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@keyframes ring-in { from { stroke-dasharray: 0 400; } }
+
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+@media (min-width: 720px) { .stats { grid-template-columns: repeat(4, 1fr); } }
+.stat { display: flex; align-items: center; gap: 12px; padding: 14px; }
+.stat .ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--brand-soft); color: var(--brand); }
+.stat.high .ico { background: var(--high-soft); color: var(--high); }
+.stat.medium .ico { background: var(--medium-soft); color: var(--medium); }
+.stat strong { display: block; font-size: 24px; line-height: 1.05; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 13px; color: var(--ink-2); }
+
+.two-col { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px 20px; }
+.two-col > * { min-width: 0; }
+@media (min-width: 820px) { .two-col { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } }
+
+/* task rows */
+.task-list { display: grid; gap: 8px; padding-bottom: 72px; }
+@media (min-width: 900px) { .task-list { padding-bottom: 0; } }
+.task {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start;
+  padding: 12px 8px 12px 12px; background: var(--surface); border: 1px solid var(--line);
+  border-left: 4px solid var(--c, var(--line)); border-radius: var(--r-md); box-shadow: var(--shadow-1);
+  transition: background 0.2s, opacity 0.2s;
+}
+.task.done { background: var(--surface-2); box-shadow: none; }
+.task.done .task-title { text-decoration: line-through; color: var(--ink-3); }
+.task.done .task-desc { color: var(--ink-3); }
+.task.done .badge { opacity: 0.6; }
+.check {
+  width: 28px; height: 28px; margin-top: 2px; border-radius: 50%; border: 2px solid var(--ink-3);
+  background: transparent; display: grid; place-items: center; color: transparent; padding: 0;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+.check:hover { border-color: var(--brand); }
+.check[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+.check:active { transform: scale(0.88); }
+.task-title { font-weight: 650; font-size: 16px; overflow-wrap: anywhere; }
+.task-desc { color: var(--ink-2); font-size: 14px; margin-top: 2px; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.task-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.task-actions { display: flex; flex-direction: column; }
+@media (min-width: 560px) { .task-actions { flex-direction: row; } }
+
+.fab {
+  position: fixed; right: 18px; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 18px); z-index: 25;
+  height: 56px; padding: 0 22px 0 18px; border: 0; border-radius: 28px; background: var(--brand); color: var(--brand-ink);
+  display: flex; align-items: center; gap: 8px; font-weight: 700; box-shadow: var(--shadow-2);
+  transition: transform 0.12s;
+}
+.fab:active { transform: scale(0.96); }
+@media (min-width: 900px) { .fab { position: static; box-shadow: var(--shadow-1); height: 46px; } }
+
+/* family member cards */
+.member-grid { display: grid; gap: 12px; }
+@media (min-width: 560px) { .member-grid { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 900px) { .member-grid { grid-template-columns: repeat(3, 1fr); } }
+.member {
+  display: grid; gap: 14px; text-align: left; width: 100%; padding: 16px; background: var(--surface);
+  border: 1px solid var(--line); border-top: 5px solid var(--c); border-radius: var(--r-md); box-shadow: var(--shadow-1);
+  transition: transform 0.12s;
+}
+.member:active { transform: scale(0.985); }
+.member-top { display: flex; align-items: center; gap: 12px; }
+.who { min-width: 0; }
+.who strong { display: block; }
+.who span { display: block; font-size: 13px; color: var(--ink-2); }
+.member-top .who strong { font-size: 18px; }
+.member-nums { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.member-nums > span { display: block; background: var(--surface-2); border-radius: var(--r-sm); padding: 8px 10px; }
+.member-nums b { font-size: 20px; font-variant-numeric: tabular-nums; }
+.member-nums small { display: block; color: var(--ink-2); font-size: 12px; }
+.profile-chip {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px; text-align: left;
+  border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2);
+}
+.profile-chip:hover { background: var(--brand-soft); }
+.member.me { outline: 2px solid var(--c); outline-offset: 2px; }
+
+/* statistics */
+.bars { display: grid; gap: 12px; }
+.bar-row { display: grid; gap: 5px; }
+.bar-label { display: flex; justify-content: space-between; font-size: 14px; }
+.bar-label b { font-variant-numeric: tabular-nums; }
+.bar { height: 10px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+.bar > i { display: block; height: 100%; width: var(--w, 0%); background: var(--c, var(--brand)); border-radius: 6px; transition: width 0.6s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.big-pct { display: flex; align-items: baseline; gap: 8px; }
+.big-pct strong { font-size: 44px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+
+/* deadline rows */
+.deadline { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.deadline:last-child { border-bottom: 0; }
+.deadline .what { flex: 1; min-width: 0; }
+.deadline .what b { display: block; font-weight: 600; overflow-wrap: anywhere; }
+.deadline .what small { color: var(--ink-2); display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; margin-top: 3px; }
+
+/* settings */
+.setting-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.setting-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.setting-row:first-child { padding-top: 0; }
+.setting-row p { font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+.setting-row > div:first-child { flex: 1; min-width: 0; }
+.stack { display: grid; gap: 14px; }
+
+/* 6. DIALOGS ------------------------------------------------------------- */
+dialog {
+  border: 0; padding: 0; background: var(--surface); color: var(--ink);
+  width: min(100%, 520px); max-height: 92dvh; border-radius: var(--r-lg) var(--r-lg) 0 0;
+  margin: auto auto 0; box-shadow: var(--shadow-2); overflow: auto;
+}
+dialog::backdrop { background: rgba(8, 16, 13, 0.55); }
+dialog[open] { animation: sheet-in 0.22s ease-out; }
+@keyframes sheet-in { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (min-width: 640px) { dialog { border-radius: var(--r-lg); margin: auto; } }
+.dlg { padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0px)); }
+.dlg h2 { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
+.dlg .dlg-sub { color: var(--ink-2); margin-top: 4px; margin-bottom: 18px; }
+.dlg-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+.dlg-actions .btn { flex: 1; }
+@media (min-width: 640px) { .dlg-actions .btn { flex: 0 0 auto; } }
+.dlg-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.err { color: var(--danger); font-size: 14px; min-height: 20px; text-align: center; margin: 6px 0; }
+.field .err { text-align: left; margin: 0; min-height: 0; }
+
+/* PIN pad */
+.pin-who { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; margin-bottom: 14px; }
+.pin-dots { display: flex; justify-content: center; gap: 14px; margin: 10px 0 4px; }
+.pin-dots i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--ink-3); transition: background 0.12s, border-color 0.12s; }
+.pin-dots i.on { background: var(--brand); border-color: var(--brand); }
+.pin-dots.shake { animation: shake 0.3s; }
+@keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 280px; margin: 8px auto 6px; }
+.key { height: 58px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface-2); font-size: 22px; font-weight: 600; display: grid; place-items: center; transition: background 0.1s, transform 0.08s; }
+.key:active { background: var(--brand-soft); transform: scale(0.94); }
+.key.blank { visibility: hidden; }
+.key.util { background: transparent; border-color: transparent; color: var(--ink-2); }
+.pin-links { display: flex; justify-content: center; gap: 18px; margin-top: 10px; }
+.link-btn { border: 0; background: none; color: var(--brand); font-weight: 600; padding: 8px; text-decoration: underline; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* inline icons inside sentences */
+p svg, small svg { display: inline-block; vertical-align: -2px; margin-right: 4px; }
+
+  </style>
+</head>
+<body>
+  <!-- The whole interface is drawn into #app by app.js -->
+  <div id="app"></div>
+  <div id="toasts" aria-live="polite"></div>
+  <noscript>Family Tasks needs JavaScript turned on to work.</noscript>
+  <script>
+/* ==========================================================================
+   Family Task Manager — app.js  (vanilla JavaScript, no framework)
+
+   IMPORTANT — PRIVACY LIMITATION (please read):
+   This is a client-side prototype. Everything, including each person's
+   "private" tasks and PIN, lives in this browser's localStorage on this
+   device. The PIN screen only hides private tasks from casual use of the app.
+   It is NOT real security: anyone who can open the browser dev tools, read the
+   device storage, or view this source code can get to the data. Real privacy
+   needs a backend with server-side authentication and per-user access rules.
+   The code is split into small layers (Storage, Repo, Auth) so that a backend
+   can replace them later without rewriting the views.
+
+   File map
+     1. Config & seed data        5. Icons
+     2. Storage layer             6. Views (HTML builders)
+     3. State, selectors, Repo    7. Dialogs (task form, confirm, PIN)
+     4. Utilities                 8. Actions, events, boot
+   ========================================================================== */
+(() => {
+  'use strict';
+
+  /* ======================================================================
+     1. CONFIG & SEED DATA
+     ====================================================================== */
+  const STORAGE_KEY = 'familyTaskManager.v1';
+  const SCHEMA_VERSION = 1;
+  const PIN_LENGTH = 4;
+  const MAX_PIN_TRIES = 5;
+  const PIN_LOCK_MS = 30 * 1000;
+
+  // Optional categories for tasks that are shared by the whole family.
+  const FAMILY_CATEGORIES = ['Home', 'Errands', 'Bills', 'Study', 'Work', 'Events'];
+
+  // The six family members. `categories` are optional suggestions for that
+  // person's private tasks. `color` is the avatar colour, `tint` is the lighter
+  // shade used on the dark dashboard ring.
+  const DEFAULT_MEMBERS = [
+    { id: 'fawad',   name: 'Fawad',   role: '2nd-year college student',       color: '#3b6fd4', tint: '#8fb0f7', categories: ['College', 'Study', 'Assignments', 'Exams'] },
+    { id: 'hammad',  name: 'Hammad',  role: 'MS Mechanical Engineering, writing thesis', color: '#7a4fc9', tint: '#bba0f2', categories: ['Thesis', 'Research', 'University', 'Mechanical Engineering'] },
+    { id: 'tayyaba', name: 'Tayyaba', role: 'BS Botany student',              color: '#c24378', tint: '#f295b8', categories: ['Botany', 'University', 'Assignments', 'Study'] },
+    { id: 'areeba',  name: 'Areeba',  role: 'Attending computer-learning classes', color: '#c26a12', tint: '#f6b665', categories: ['Computer Classes', 'Practice', 'Learning'] },
+    { id: 'dad',     name: 'Dad',     role: 'Works at a Sui gas office',      color: '#1e7a6b', tint: '#74dcc7', categories: ['Work', 'Office', 'Personal'] },
+    { id: 'mom',     name: 'Mom',     role: 'Housewife',                      color: '#a8503a', tint: '#eb9f88', categories: ['Home', 'Household', 'Personal'] },
+  ];
+
+  const PRIORITY = {
+    high:   { label: 'High',   rank: 3 },
+    medium: { label: 'Medium', rank: 2 },
+    low:    { label: 'Low',    rank: 1 },
+  };
+
+  const NAV = [
+    { id: 'dashboard', label: 'Dashboard',        short: 'Home',     icon: 'home' },
+    { id: 'family',    label: 'Family',           short: 'Family',   icon: 'users' },
+    { id: 'tasks',     label: 'Family Tasks',     short: 'Tasks',    icon: 'list' },
+    { id: 'private',   label: 'My Private Tasks', short: 'Private',  icon: 'lock' },
+    { id: 'stats',     label: 'Statistics',       short: 'Stats',    icon: 'chart' },
+    { id: 'settings',  label: 'Settings',         short: 'Settings', icon: 'settings' },
+  ];
+
+  /* ======================================================================
+     2. STORAGE LAYER
+     Swap this object for API calls (fetch) when a backend exists.
+     ====================================================================== */
+  let storageWarned = false;
+  const Storage = {
+    load() {
+      try {
+        const raw = window.localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch (err) {
+        console.warn('Could not read saved data', err);
+        return null;
+      }
+    },
+    save(data) {
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch (err) {
+        if (!storageWarned) {
+          storageWarned = true;
+          toast('Saving is unavailable here, so changes will be lost on reload.');
+        }
+      }
+    },
+    clear() {
+      try { window.localStorage.removeItem(STORAGE_KEY); } catch (err) { /* ignore */ }
+    },
+  };
+
+  /* ======================================================================
+     3. STATE, SELECTORS, REPOSITORY
+     ====================================================================== */
+  /*
+    Data shape (kept plain so it maps cleanly to database tables later):
+    state = {
+      schemaVersion, prefs: { theme, lastMemberId },
+      members:      [{ id, name, role, color, tint, categories[], pin: {salt, hash} | null }],
+      familyTasks:  [{ id, title, description, assigneeId|'all', priority, dueDate, category,
+                       completed, completedAt, createdAt, createdBy }],
+      privateTasks: { [memberId]: [{ id, title, description, priority, dueDate, category,
+                                     completed, completedAt, createdAt }] }
+    }
+  */
+  function defaultState() {
+    return {
+      schemaVersion: SCHEMA_VERSION,
+      prefs: { theme: 'system', lastMemberId: null },
+      members: DEFAULT_MEMBERS.map((m) => ({ ...m, pin: null })),
+      familyTasks: [],
+      privateTasks: Object.fromEntries(DEFAULT_MEMBERS.map((m) => [m.id, []])),
+    };
+  }
+
+  function normalize(saved) {
+    const base = defaultState();
+    if (!saved || typeof saved !== 'object') return base;
+    const savedMembers = Array.isArray(saved.members) ? saved.members : [];
+    return {
+      schemaVersion: SCHEMA_VERSION,
+      prefs: { ...base.prefs, ...(saved.prefs || {}) },
+      members: base.members.map((m) => {
+        const old = savedMembers.find((x) => x && x.id === m.id);
+        return old ? { ...m, pin: old.pin || null } : m;
+      }),
+      familyTasks: Array.isArray(saved.familyTasks) ? saved.familyTasks : [],
+      privateTasks: { ...base.privateTasks, ...(saved.privateTasks || {}) },
+    };
+  }
+
+  let state = defaultState();
+  // Who is signed in. Kept in memory only, so the app asks for a profile
+  // (and PIN) every time it is opened.
+  const session = { memberId: null };
+
+  // UI state (filters etc.) — not persisted.
+  const ui = {
+    family:  { q: '', person: 'all', priority: 'all', status: 'all', category: 'all' },
+    private: { q: '', priority: 'all', status: 'all', category: 'all' },
+  };
+
+  const persist = () => Storage.save(state);
+
+  const S = {
+    me: () => state.members.find((m) => m.id === session.memberId) || null,
+    member: (id) => state.members.find((m) => m.id === id) || null,
+    family: () => state.familyTasks,
+    // PRIVACY RULE: private tasks are only ever read for the signed-in member.
+    myPrivate: () => {
+      if (!session.memberId) return [];
+      if (!state.privateTasks[session.memberId]) state.privateTasks[session.memberId] = [];
+      return state.privateTasks[session.memberId];
+    },
+  };
+
+  const Repo = {
+    list: (scope) => (scope === 'family' ? S.family() : S.myPrivate()),
+    find(scope, id) { return Repo.list(scope).find((t) => t.id === id) || null; },
+    upsert(scope, id, data) {
+      const list = Repo.list(scope);
+      const existing = id ? list.find((t) => t.id === id) : null;
+      if (existing) {
+        Object.assign(existing, data);
+      } else {
+        list.push({
+          id: uid(), completed: false, completedAt: null,
+          createdAt: new Date().toISOString(),
+          ...(scope === 'family' ? { createdBy: session.memberId } : {}),
+          ...data,
+        });
+      }
+      persist();
+    },
+    toggle(scope, id) {
+      const t = Repo.find(scope, id);
+      if (!t) return;
+      t.completed = !t.completed;
+      t.completedAt = t.completed ? new Date().toISOString() : null;
+      persist();
+    },
+    remove(scope, id) {
+      const list = Repo.list(scope);
+      const i = list.findIndex((t) => t.id === id);
+      if (i > -1) list.splice(i, 1);
+      persist();
+    },
+  };
+
+  /* ======================================================================
+     4. UTILITIES
+     ====================================================================== */
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const pad = (n) => String(n).padStart(2, '0');
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  const uid = () => (window.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
+
+  function todayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+  function parseDate(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+  function daysUntil(s) { return Math.round((parseDate(s) - parseDate(todayStr())) / 86400000); }
+  function fmtDate(s) { return parseDate(s).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }); }
+  function fmtWeekday(s) { return parseDate(s).toLocaleDateString(undefined, { weekday: 'long' }); }
+  function fmtCreated(iso) { return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }); }
+  function addDays(n) { const d = new Date(); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+
+  function greeting() {
+    const h = new Date().getHours();
+    return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  }
+
+  function toast(message) {
+    const host = $('#toasts');
+    if (!host) return;
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = message;
+    host.appendChild(el);
+    setTimeout(() => el.remove(), 2600);
+  }
+
+  // --- PIN hashing (prototype only — see the note at the top of this file) ---
+  const newSalt = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => pad(b.toString(16))).join('');
+  function weakHash(str) { let h = 5381; for (const ch of str) h = ((h << 5) + h + ch.charCodeAt(0)) >>> 0; return 'weak-' + h.toString(16); }
+  async function hashPin(pin, salt, stored) {
+    const text = `${salt}:${pin}`;
+    const useWeak = (stored && stored.startsWith('weak-')) || !(window.crypto && crypto.subtle);
+    if (useWeak) return weakHash(text);
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(buf), (b) => pad(b.toString(16))).join('');
+  }
+  async function makePin(pin) { const salt = newSalt(); return { salt, hash: await hashPin(pin, salt) }; }
+  async function verifyPin(member, pin) {
+    if (!member.pin) return true;
+    return (await hashPin(pin, member.pin.salt, member.pin.hash)) === member.pin.hash;
+  }
+
+  /* ======================================================================
+     5. ICONS  (inline SVG, stroke style)
+     ====================================================================== */
+  const ICONS = {
+    home: '<path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
+    users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+    list: '<path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/>',
+    lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+    unlock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/>',
+    chart: '<path d="M18 20V10M12 20V4M6 20v-6"/>',
+    settings: '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+    edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+    trash: '<path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+    flag: '<path d="M4 22V4M4 4h13l-2 4 2 4H4"/>',
+    clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+    done: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+    x: '<path d="M18 6 6 18M6 6l12 12"/>',
+    backspace: '<path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><path d="m18 9-6 6m0-6 6 6"/>',
+    download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+    upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>',
+    swap: '<path d="m17 1 4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="m7 23-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
+    shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+    inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.7 4H7.3a2 2 0 0 0-1.8 1.1z"/>',
+    phone: '<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/>',
+  };
+  const ico = (name, size = 20) =>
+    `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
+
+  /* ======================================================================
+     6. VIEWS
+     ====================================================================== */
+  const currentView = () => {
+    const v = location.hash.replace(/^#\/?/, '');
+    return NAV.some((n) => n.id === v) ? v : 'dashboard';
+  };
+
+  // ---- Profile picker (the "lock screen") ----
+  function pickerView() {
+    const cards = state.members.map((m) => `
+      <button class="pick" style="--c:${m.color}" data-action="pick" data-id="${m.id}" aria-label="Open ${esc(m.name)}'s space${m.pin ? ' (PIN protected)' : ''}">
+        <span class="avatar lg" style="--c:${m.color}">${esc(m.name[0])}</span>
+        <strong>${esc(m.name)}</strong>
+        <span class="lock-state">${ico(m.pin ? 'lock' : 'unlock', 13)}${m.pin ? 'PIN set' : 'No PIN yet'}</span>
+      </button>`).join('');
+    return `
+      <div class="picker">
+        <div class="brand"><span class="brand-mark">${ico('check', 18)}</span>Family Tasks</div>
+        <h1>Who's using the app?</h1>
+        <p class="muted">Pick your name. Everyone sees the family tasks; your private tasks open only in your own space.</p>
+        <div class="picker-grid">${cards}</div>
+        <p class="picker-foot">PINs are stored on this device only. This is a prototype, so it is not strong security.</p>
+      </div>`;
+  }
+
+  // ---- App shell ----
+  function navItems(active) {
+    return NAV.map((n) => `
+      <a class="nav-item" href="#/${n.id}" ${n.id === active ? 'aria-current="page"' : ''}>
+        <span class="nav-ico">${ico(n.icon, 20)}</span>
+        <span class="nav-short">${n.short}</span><span class="nav-full">${n.label}</span>
+      </a>`).join('');
+  }
+
+  function shell(content, active) {
+    const me = S.me();
+    return `
+      <div class="shell">
+        <aside class="sidebar">
+          <div class="brand"><span class="brand-mark">${ico('check', 18)}</span>Family Tasks</div>
+          <nav class="nav-list" aria-label="Main">${navItems(active)}</nav>
+          <div class="sidebar-foot">
+            <button class="profile-chip" data-action="lock" aria-label="Switch profile, signed in as ${esc(me.name)}">
+              <span class="avatar" style="--c:${me.color}">${esc(me.name[0])}</span>
+              <span class="who"><strong>${esc(me.name)}</strong><span>Switch profile</span></span>
+            </button>
+          </div>
+        </aside>
+        <div>
+          <main class="main" id="main" tabindex="-1">
+            <header class="topbar topbar-mobile">
+              <div class="brand"><span class="brand-mark">${ico('check', 18)}</span>Family Tasks</div>
+              <div class="topbar-actions">
+                <button class="icon-btn" data-action="lock" aria-label="Switch profile, signed in as ${esc(me.name)}">${ico('swap', 18)}</button>
+                <span class="avatar sm" style="--c:${me.color}" aria-hidden="true">${esc(me.name[0])}</span>
+              </div>
+            </header>
+            ${content}
+          </main>
+        </div>
+        <nav class="bottom-nav" aria-label="Main">${navItems(active)}</nav>
+      </div>`;
+  }
+
+  // ---- Shared bits ----
+  function assigneeBadge(t) {
+    const m = S.member(t.assigneeId);
+    return m
+      ? `<span class="badge who" style="--c:${m.color}">${esc(m.name)}</span>`
+      : `<span class="badge">${ico('users', 12)}Everyone</span>`;
+  }
+  const priorityBadge = (p) => `<span class="badge ${p}">${ico('flag', 11)}${PRIORITY[p] ? PRIORITY[p].label : p}</span>`;
+
+  function dueBadge(t) {
+    if (!t.dueDate) return '';
+    const n = daysUntil(t.dueDate);
+    let cls = '', label;
+    if (t.completed) label = fmtDate(t.dueDate);
+    else if (n < 0) { cls = 'overdue'; label = n === -1 ? 'Due yesterday' : `${-n} days overdue`; }
+    else if (n === 0) { cls = 'soon'; label = 'Due today'; }
+    else if (n === 1) { cls = 'soon'; label = 'Due tomorrow'; }
+    else if (n <= 6) label = `Due ${fmtWeekday(t.dueDate)}`;
+    else label = `Due ${fmtDate(t.dueDate)}`;
+    return `<span class="badge ${cls}">${ico('calendar', 12)}${label}</span>`;
+  }
+  function whenLabel(dateStr) {
+    const n = daysUntil(dateStr);
+    if (n < 0) return { text: n === -1 ? 'Yesterday' : `${-n}d overdue`, cls: 'overdue' };
+    if (n === 0) return { text: 'Today', cls: 'soon' };
+    if (n === 1) return { text: 'Tomorrow', cls: 'soon' };
+    if (n <= 6) return { text: fmtWeekday(dateStr), cls: '' };
+    return { text: fmtDate(dateStr), cls: '' };
+  }
+
+  function emptyState({ icon, title, text, actionHtml = '' }) {
+    return `<div class="empty"><div class="empty-ico">${ico(icon, 26)}</div><h3>${title}</h3><p>${text}</p>${actionHtml}</div>`;
+  }
+
+  // ---- Statistics helpers ----
+  function familyStats() {
+    const t = S.family();
+    const done = t.filter((x) => x.completed).length;
+    return {
+      total: t.length, done, pending: t.length - done,
+      high: t.filter((x) => !x.completed && x.priority === 'high').length,
+      pct: t.length ? Math.round((done / t.length) * 100) : 0,
+    };
+  }
+  function memberStats(id) {
+    const t = S.family().filter((x) => x.assigneeId === id);
+    const done = t.filter((x) => x.completed).length;
+    return { total: t.length, done, pending: t.length - done };
+  }
+  function upcoming(limit = 6) {
+    const items = [
+      ...S.family().filter((t) => !t.completed && t.dueDate).map((t) => ({ ...t, scope: 'family' })),
+      ...S.myPrivate().filter((t) => !t.completed && t.dueDate).map((t) => ({ ...t, scope: 'private' })),
+    ];
+    return items.filter((t) => daysUntil(t.dueDate) <= 14).sort((a, b) => a.dueDate.localeCompare(b.dueDate)).slice(0, limit);
+  }
+  function deadlineRows(items) {
+    if (!items.length) return '<p class="muted small">Nothing due in the next two weeks.</p>';
+    return items.map((t) => {
+      const w = whenLabel(t.dueDate);
+      const who = t.scope === 'private' ? `${ico('lock', 12)} Private` : (S.member(t.assigneeId) ? esc(S.member(t.assigneeId).name) : 'Everyone');
+      return `<div class="deadline"><span class="what"><b>${esc(t.title)}</b>
+        <small><span class="badge ${w.cls}">${w.text}</span>${who}</small></span>${priorityBadge(t.priority)}</div>`;
+    }).join('');
+  }
+
+  // ---- Dashboard ----
+  function ringSvg() {
+    const R = 52, C = 2 * Math.PI * R, gap = 16, seg = C / 6 - gap;
+    let arcs = '';
+    state.members.forEach((m, i) => {
+      const st = memberStats(m.id);
+      const frac = st.total ? st.done / st.total : 0;
+      const rot = -90 + i * 60 + ((gap / C) * 360) / 2;
+      const common = `cx="70" cy="70" r="${R}" fill="none" stroke-width="12" stroke-linecap="round" transform="rotate(${rot.toFixed(2)} 70 70)"`;
+      arcs += `<circle ${common} stroke="var(--hero-track)" stroke-dasharray="${seg.toFixed(2)} ${(C - seg).toFixed(2)}"/>`;
+      if (frac > 0) arcs += `<circle class="ring-arc" ${common} stroke="${m.tint}" stroke-dasharray="${(seg * frac).toFixed(2)} ${C.toFixed(2)}"/>`;
+    });
+    return `<svg viewBox="0 0 140 140" role="img" aria-label="Family completion ring, one arc per person">${arcs}</svg>`;
+  }
+
+  function dashboardView() {
+    const me = S.me();
+    const st = familyStats();
+    const myFamilyOpen = S.family().filter((t) => !t.completed && (t.assigneeId === me.id || t.assigneeId === 'all'));
+    const myPrivateOpen = S.myPrivate().filter((t) => !t.completed);
+    const line = myFamilyOpen.length + myPrivateOpen.length === 0
+      ? "You're all caught up."
+      : `You have ${plural(myPrivateOpen.length, 'personal task')} and ${plural(myFamilyOpen.length, 'family task')} to do.`;
+    const today = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+
+    const legend = state.members.map((m) => {
+      const ms = memberStats(m.id);
+      return `<li><i style="--t:${m.tint}"></i><b>${esc(m.name)}</b><em>${ms.total ? `${ms.done}/${ms.total}` : '–'}</em></li>`;
+    }).join('');
+
+    const statCard = (cls, icon, num, label) =>
+      `<div class="card stat ${cls}"><span class="ico">${ico(icon, 20)}</span><div><strong>${num}</strong><span>${label}</span></div></div>`;
+
+    const yourOpen = [
+      ...myFamilyOpen.map((t) => ({ ...t, scope: 'family' })),
+      ...myPrivateOpen.map((t) => ({ ...t, scope: 'private' })),
+    ].sort((a, b) => PRIORITY[b.priority].rank - PRIORITY[a.priority].rank).slice(0, 5);
+
+    const yourRows = yourOpen.length
+      ? yourOpen.map((t) => `<div class="deadline"><span class="what"><b>${esc(t.title)}</b><small>${t.scope === 'private' ? `${ico('lock', 12)} Private` : 'Family'}</small></span>${priorityBadge(t.priority)}</div>`).join('')
+      : '<p class="muted small">Nothing waiting on you right now.</p>';
+
+    const emptyBlock = S.family().length === 0 ? `
+      <div style="margin-top:14px">${emptyState({
+        icon: 'list', title: 'No family tasks yet',
+        text: 'Add the first task for the family, or load a few examples to see how the app looks.',
+        actionHtml: `<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn primary" data-action="add-task" data-scope="family">${ico('plus', 18)}Add a family task</button><button class="btn" data-action="sample">Try sample tasks</button></div>`,
+      })}</div>` : '';
+
+    return `
+      <section class="hero">
+        <div>
+          <p class="hero-date">${today}</p>
+          <h1>${greeting()}, ${esc(me.name)} 👋</h1>
+          <p class="hero-line">${line}</p>
+        </div>
+        <div class="ring-wrap">
+          <div class="ring">${ringSvg()}<div class="ring-center"><strong>${st.pct}%</strong><span>family done</span></div></div>
+          <ul class="ring-legend" aria-label="Completed shared tasks per person">${legend}</ul>
+        </div>
+      </section>
+      <div class="stats">
+        ${statCard('', 'list', st.total, 'Family tasks')}
+        ${statCard('', 'done', st.done, 'Completed')}
+        ${statCard('', 'clock', st.pending, 'Pending')}
+        ${statCard('high', 'flag', st.high, 'High priority')}
+      </div>
+      ${emptyBlock}
+      <div class="two-col">
+        <div><div class="section-head"><h2 class="section-title">Coming up</h2><a class="link-btn small" href="#/tasks">All tasks</a></div>
+          <div class="card">${deadlineRows(upcoming(6))}</div></div>
+        <div><div class="section-head"><h2 class="section-title">On your plate</h2><a class="link-btn small" href="#/private">My private tasks</a></div>
+          <div class="card">${yourRows}</div></div>
+      </div>`;
+  }
+
+  // ---- Family (member cards) ----
+  function familyView() {
+    const me = S.me();
+    const cards = state.members.map((m) => {
+      const ms = memberStats(m.id);
+      const mine = m.id === me.id;
+      return `
+        <button class="member ${mine ? 'me' : ''}" style="--c:${m.color}" data-action="open-member" data-id="${m.id}" aria-label="${mine ? 'Open your dashboard' : `Switch to ${esc(m.name)}`}">
+          <span class="member-top">
+            <span class="avatar lg" style="--c:${m.color}">${esc(m.name[0])}</span>
+            <span class="who"><strong>${esc(m.name)}${mine ? ' (you)' : ''}</strong><span>${esc(m.role)}</span></span>
+          </span>
+          <span class="member-nums">
+            <span><b>${ms.pending}</b><small>Pending shared</small></span>
+            <span><b>${ms.done}</b><small>Completed</small></span>
+          </span>
+        </button>`;
+    }).join('');
+    return `
+      <div class="page-head"><div><h1 class="page-title">Family</h1>
+        <p class="page-sub">Numbers count shared tasks only. To open someone's space, they enter their own PIN.</p></div></div>
+      <div class="member-grid">${cards}</div>`;
+  }
+
+  // ---- Task list views (family + private share one builder) ----
+  function filteredTasks(scope) {
+    const f = ui[scope];
+    const q = f.q.trim().toLowerCase();
+    return Repo.list(scope).filter((t) => {
+      if (q && !(`${t.title} ${t.description || ''} ${t.category || ''}`.toLowerCase().includes(q))) return false;
+      if (scope === 'family' && f.person !== 'all' && t.assigneeId !== f.person) return false;
+      if (f.priority !== 'all' && t.priority !== f.priority) return false;
+      if (f.status === 'open' && t.completed) return false;
+      if (f.status === 'done' && !t.completed) return false;
+      if (f.category !== 'all' && (t.category || '') !== f.category) return false;
+      return true;
+    }).sort((a, b) =>
+      (a.completed - b.completed) ||
+      ((a.dueDate || '9999').localeCompare(b.dueDate || '9999')) ||
+      (PRIORITY[b.priority].rank - PRIORITY[a.priority].rank) ||
+      b.createdAt.localeCompare(a.createdAt));
+  }
+
+  function taskRow(t, scope) {
+    const owner = scope === 'family' ? S.member(t.assigneeId) : S.me();
+    const creator = scope === 'family' && t.createdBy && S.member(t.createdBy) ? ` by ${esc(S.member(t.createdBy).name)}` : '';
+    return `
+      <li class="task ${t.completed ? 'done' : ''}" style="--c:${owner ? owner.color : 'var(--ink-3)'}">
+        <button class="check" data-action="toggle" data-scope="${scope}" data-id="${t.id}" aria-pressed="${t.completed}"
+          aria-label="${t.completed ? 'Mark as not done' : 'Mark as done'}: ${esc(t.title)}">${ico('check', 16)}</button>
+        <div>
+          <div class="task-title">${esc(t.title)}</div>
+          ${t.description ? `<p class="task-desc">${esc(t.description)}</p>` : ''}
+          <div class="task-meta">
+            ${scope === 'family' ? assigneeBadge(t) : ''}
+            ${priorityBadge(t.priority)}
+            ${dueBadge(t)}
+            ${t.category ? `<span class="badge">${esc(t.category)}</span>` : ''}
+            <span class="small muted">Added ${fmtCreated(t.createdAt)}${creator}</span>
+          </div>
+        </div>
+        <div class="task-actions">
+          <button class="icon-btn plain" data-action="edit-task" data-scope="${scope}" data-id="${t.id}" aria-label="Edit ${esc(t.title)}">${ico('edit', 18)}</button>
+          <button class="icon-btn plain danger" data-action="delete-task" data-scope="${scope}" data-id="${t.id}" aria-label="Delete ${esc(t.title)}">${ico('trash', 18)}</button>
+        </div>
+      </li>`;  }
+
+  function taskListHtml(scope) {
+    const all = Repo.list(scope);
+    const tasks = filteredTasks(scope);
+    if (!all.length) {
+      return emptyState(scope === 'family'
+        ? { icon: 'list', title: 'No family tasks yet', text: 'Tasks you add here are visible to all six of us.',
+            actionHtml: `<button class="btn primary" data-action="add-task" data-scope="family">${ico('plus', 18)}Add the first task</button>` }
+        : { icon: 'lock', title: 'Your private list is empty', text: 'Reminders, study goals and deadlines that only you should see.',
+            actionHtml: `<button class="btn primary" data-action="add-task" data-scope="private">${ico('plus', 18)}Add a private task</button>` });
+    }
+    if (!tasks.length) {
+      return emptyState({ icon: 'search', title: 'No tasks match', text: 'Try a different search or clear the filters.',
+        actionHtml: '<button class="btn" data-action="clear-filters">Clear filters</button>' });
+    }
+    return `<ul class="task-list">${tasks.map((t) => taskRow(t, scope)).join('')}</ul>`;
+  }
+
+  function selectHtml(id, scope, key, label, options, value) {
+    return `<select class="select" id="${id}" data-filter="${key}" data-scope="${scope}" aria-label="${label}">
+      ${options.map(([v, l]) => `<option value="${esc(v)}" ${v === value ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+  }
+
+  function tasksView(scope) {
+    const me = S.me();
+    const f = ui[scope];
+    const isFam = scope === 'family';
+    const cats = isFam ? FAMILY_CATEGORIES : me.categories;
+    const filters = [
+      isFam ? selectHtml('f-person', scope, 'person', 'Filter by person', [['all', 'Everyone'], ...state.members.map((m) => [m.id, m.name])], f.person) : '',
+      selectHtml('f-priority', scope, 'priority', 'Filter by priority', [['all', 'Any priority'], ['high', 'High'], ['medium', 'Medium'], ['low', 'Low']], f.priority),
+      selectHtml('f-status', scope, 'status', 'Filter by status', [['all', 'Open and done'], ['open', 'Open'], ['done', 'Completed']], f.status),
+      selectHtml('f-category', scope, 'category', 'Filter by category', [['all', 'Any category'], ...cats.map((c) => [c, c])], f.category),
+    ].join('');
+    const pinNote = !isFam && !me.pin ? `
+      <div class="lock-note">${ico('shield', 20)}<div>You haven't set a PIN yet, so anyone who picks your name can open this list.
+        <button data-action="set-pin">Set a PIN</button></div></div>` : '';
+    return `
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">${isFam ? 'Family Tasks' : `${esc(me.name)}'s Private Tasks`}</h1>
+          <p class="page-sub">${isFam ? 'Visible to everyone in the family.' : `${ico('lock', 14)} Only shown when you're signed in as ${esc(me.name)}.`}</p>
+        </div>
+        <button class="fab" data-action="add-task" data-scope="${scope}">${ico('plus', 22)}Add task</button>
+      </div>
+      ${pinNote}
+      <div class="search">${ico('search', 18)}<input class="input" id="task-q" data-scope="${scope}" type="search" placeholder="Search tasks" aria-label="Search tasks" value="${esc(f.q)}" autocomplete="off"></div>
+      <div class="filters">${filters}</div>
+      <div id="task-list">${taskListHtml(scope)}</div>`;
+  }
+
+  // ---- Statistics ----
+  function barRow(label, value, max, color, extra = '') {
+    const w = max ? Math.round((value / max) * 100) : 0;
+    return `<div class="bar-row"><div class="bar-label"><span>${label}</span><b>${value}${extra}</b></div>
+      <div class="bar" role="img" aria-label="${label}: ${value}"><i style="--w:${w}%;--c:${color}"></i></div></div>`;
+  }
+
+  function statsView() {
+    const st = familyStats();
+    const me = S.me();
+    const tasks = S.family();
+    const perMember = state.members.map((m) => ({ m, ...memberStats(m.id) }));
+    const everyone = tasks.filter((t) => t.assigneeId === 'all').length;
+    const maxMember = Math.max(1, everyone, ...perMember.map((x) => x.total));
+    const byPri = ['high', 'medium', 'low'].map((p) => ({ p, n: tasks.filter((t) => t.priority === p).length }));
+    const maxPri = Math.max(1, ...byPri.map((x) => x.n));
+    const priColor = { high: 'var(--high)', medium: 'var(--medium)', low: 'var(--low)' };
+    const priv = S.myPrivate();
+    const pDone = priv.filter((t) => t.completed).length;
+    const pPct = priv.length ? Math.round((pDone / priv.length) * 100) : 0;
+
+    return `
+      <div class="page-head"><div><h1 class="page-title">Statistics</h1><p class="page-sub">How the family is doing on shared tasks.</p></div></div>
+      <div class="two-col">
+        <div class="card">
+          <h2 class="section-title">Completion</h2>
+          <div class="big-pct" style="margin:12px 0"><strong>${st.pct}%</strong><span class="muted">${st.done} of ${st.total} tasks done</span></div>
+          ${barRow('Completed', st.done, Math.max(1, st.total), 'var(--brand)')}
+          <div style="height:12px"></div>
+          ${barRow('Pending', st.pending, Math.max(1, st.total), 'var(--medium)')}
+        </div>
+        <div class="card">
+          <h2 class="section-title">By priority</h2>
+          <div class="bars" style="margin-top:14px">${byPri.map((x) => barRow(PRIORITY[x.p].label, x.n, maxPri, priColor[x.p])).join('')}</div>
+        </div>
+      </div>
+      <div class="section-head"><h2 class="section-title">Tasks by family member</h2></div>
+      <div class="card"><div class="bars">
+        ${perMember.map((x) => barRow(esc(x.m.name), x.total, maxMember, x.m.color, x.total ? ` <span class="muted small">(${x.done} done)</span>` : '')).join('')}
+        ${everyone ? barRow('Everyone', everyone, maxMember, 'var(--ink-3)') : ''}
+      </div></div>
+      <div class="two-col">
+        <div><div class="section-head"><h2 class="section-title">Upcoming deadlines</h2></div><div class="card">${deadlineRows(upcoming(8))}</div></div>
+        <div><div class="section-head"><h2 class="section-title">Your private tasks</h2></div>
+          <div class="card"><p class="muted small" style="margin-bottom:10px">${ico('lock', 12)} Only you can see this card.</p>
+            <div class="big-pct" style="margin-bottom:12px"><strong>${pPct}%</strong><span class="muted">${pDone} of ${priv.length} done, ${esc(me.name)}</span></div>
+            ${barRow('Completed', pDone, Math.max(1, priv.length), 'var(--brand)')}</div></div>
+      </div>`;
+  }
+
+  // ---- Settings ----
+  let deferredInstall = null;
+  const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || !!window.Capacitor;
+
+  function settingsView() {
+    const me = S.me();
+    const theme = state.prefs.theme;
+    const themeSeg = ['system', 'light', 'dark'].map((v) =>
+      `<input type="radio" name="theme" id="theme-${v}" value="${v}" ${theme === v ? 'checked' : ''}><label for="theme-${v}">${v[0].toUpperCase() + v.slice(1)}</label>`).join('');
+    const install = isStandalone() ? '' : `
+      <div class="setting-row"><div><strong>Install on this phone</strong>
+        <p>${deferredInstall ? 'Adds Family Tasks to your home screen so it opens like an app.' : 'In Chrome on Android, open the ⋮ menu and choose “Add to Home screen”.'}</p></div>
+        ${deferredInstall ? `<button class="btn primary sm" data-action="install">${ico('phone', 16)}Install</button>` : ''}</div>`;
+    return `
+      <div class="page-head"><div><h1 class="page-title">Settings</h1><p class="page-sub">Signed in as ${esc(me.name)}.</p></div></div>
+      <div class="stack">
+        <section class="card">
+          <h2 class="section-title" style="margin-bottom:14px">Appearance</h2>
+          <div class="seg" role="radiogroup" aria-label="Theme">${themeSeg}</div>
+        </section>
+        <section class="card">
+          <h2 class="section-title" style="margin-bottom:14px">My profile</h2>
+          <div class="setting-row"><div><strong>${me.pin ? 'Change PIN' : 'Set a PIN'}</strong><p>${me.pin ? 'A 4-digit PIN protects your private tasks.' : 'Choose 4 digits to protect your private tasks.'}</p></div>
+            <button class="btn sm" data-action="set-pin">${me.pin ? 'Change' : 'Set PIN'}</button></div>
+          ${me.pin ? `<div class="setting-row"><div><strong>Remove PIN</strong><p>Anyone choosing your name could then open your private tasks.</p></div><button class="btn sm" data-action="remove-pin">Remove</button></div>` : ''}
+          <div class="setting-row"><div><strong>Switch profile</strong><p>Lock this space and pick someone else.</p></div>
+            <button class="btn sm" data-action="lock">${ico('swap', 16)}Switch</button></div>
+        </section>
+        <section class="card">
+          <h2 class="section-title" style="margin-bottom:14px">Your data</h2>
+          ${install}
+          <div class="setting-row"><div><strong>Back up my data</strong><p>Saves the family tasks and your private tasks to a file.</p></div>
+            <button class="btn sm" data-action="export">${ico('download', 16)}Export</button></div>
+          <div class="setting-row"><div><strong>Restore from backup</strong><p>Merges tasks from a backup file into the app.</p></div>
+            <button class="btn sm" data-action="import">${ico('upload', 16)}Import</button></div>
+          <input type="file" id="import-file" accept="application/json,.json" hidden>
+          <div class="setting-row"><div><strong>Load sample tasks</strong><p>Adds example family tasks so you can try the app.</p></div>
+            <button class="btn sm" data-action="sample">Add samples</button></div>
+          <div class="setting-row"><div><strong>Erase everything</strong><p>Deletes all tasks, PINs and settings on this device.</p></div>
+            <button class="btn sm danger" data-action="reset">Erase</button></div>
+        </section>
+        <section class="card">
+          <h2 class="section-title" style="margin-bottom:8px">About privacy</h2>
+          <p class="muted">Everything is stored only on this device. PINs keep private tasks out of sight during normal use, but this is a prototype: someone with access to the phone or its browser data could still get at the information. A future version with an online account system would be needed for real privacy.</p>
+        </section>
+      </div>`;
+  }
+
+  /* ======================================================================
+     7. DIALOGS
+     ====================================================================== */
+  // Every dialog gets its own fresh <dialog> element, removed after it closes.
+  // (Re-using one element made "close" events from an old dialog leak into the
+  // next one when dialogs were opened back to back.)
+  function makeDialog(html = '') {
+    const d = document.createElement('dialog');
+    d.innerHTML = html;
+    document.body.appendChild(d);
+    d.addEventListener('close', () => setTimeout(() => d.remove(), 0));
+    d.addEventListener('click', (e) => { if (e.target === d) d.close(); }); // backdrop click
+    d.showModal();
+    return d;
+  }
+
+  // ---- Add / edit task ----
+  function openTaskDialog(scope, id) {
+    const me = S.me();
+    const isFam = scope === 'family';
+    const existing = id ? Repo.find(scope, id) : null;
+    const t = existing || { title: '', description: '', assigneeId: isFam ? me.id : null, priority: 'medium', dueDate: '', category: '' };
+    const cats = isFam ? FAMILY_CATEGORIES : me.categories;
+    const assignees = [['all', 'Everyone'], ...state.members.map((m) => [m.id, m.name])];
+
+    const d = makeDialog(`
+      <form class="dlg" id="task-form" novalidate>
+        <div class="dlg-head"><h2>${existing ? 'Edit task' : (isFam ? 'New family task' : 'New private task')}</h2>
+          <button type="button" class="icon-btn plain" data-close aria-label="Close">${ico('x', 20)}</button></div>
+        <p class="dlg-sub">${isFam ? 'Everyone in the family can see this.' : `${ico('lock', 13)} Only you will see this task.`}</p>
+        <div class="field"><label for="tf-title">Title</label>
+          <input class="input" id="tf-title" name="title" required maxlength="120" value="${esc(t.title)}" autocomplete="off" ${existing ? '' : 'autofocus'}>
+          <span class="err" id="tf-err" role="alert"></span></div>
+        <div class="field"><label for="tf-desc">${isFam ? 'Description' : 'Notes'} (optional)</label>
+          <textarea class="textarea" id="tf-desc" name="description" maxlength="600">${esc(t.description || '')}</textarea></div>
+        ${isFam ? `<div class="field"><label for="tf-who">Assigned to</label>
+          <select class="select" id="tf-who" name="assigneeId">${assignees.map(([v, l]) => `<option value="${v}" ${v === t.assigneeId ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>` : ''}
+        <div class="field"><span class="label" id="tf-pri-l">Priority</span>
+          <div class="seg" role="radiogroup" aria-labelledby="tf-pri-l">
+            ${['low', 'medium', 'high'].map((p) => `<input type="radio" name="priority" id="tf-p-${p}" value="${p}" ${t.priority === p ? 'checked' : ''}><label for="tf-p-${p}">${PRIORITY[p].label}</label>`).join('')}
+          </div></div>
+        <div class="row-2">
+          <div class="field"><label for="tf-due">Due date</label><input class="input" type="date" id="tf-due" name="dueDate" value="${esc(t.dueDate || '')}"></div>
+          <div class="field"><label for="tf-cat">Category</label>
+            <select class="select" id="tf-cat" name="category"><option value="">None</option>
+              ${cats.map((c) => `<option value="${esc(c)}" ${c === t.category ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
+        </div>
+        <div class="dlg-actions"><button type="button" class="btn" data-close>Cancel</button>
+          <button type="submit" class="btn primary">${existing ? 'Save changes' : 'Add task'}</button></div>
+      </form>`);
+
+    $('#task-form', d).addEventListener('submit', (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const title = String(fd.get('title') || '').trim();
+      if (!title) { $('#tf-err', d).textContent = 'Give the task a title.'; $('#tf-title', d).focus(); return; }
+      const data = {
+        title,
+        description: String(fd.get('description') || '').trim(),
+        priority: fd.get('priority') || 'medium',
+        dueDate: fd.get('dueDate') || '',
+        category: fd.get('category') || '',
+      };
+      if (isFam) data.assigneeId = fd.get('assigneeId') || 'all';
+      Repo.upsert(scope, id, data);
+      d.close();
+      render();
+      toast(existing ? 'Changes saved' : 'Task added');
+    });
+  }
+
+  // ---- Confirmation dialog (promise based) ----
+  function confirmDialog({ title, message, confirmLabel = 'Delete', danger = true }) {
+    return new Promise((resolve) => {
+      const d = makeDialog(`<div class="dlg" role="alertdialog" aria-labelledby="cf-t" aria-describedby="cf-m">
+        <h2 id="cf-t">${esc(title)}</h2><p class="dlg-sub" id="cf-m">${esc(message)}</p>
+        <div class="dlg-actions"><button class="btn" data-cf="no">Cancel</button>
+        <button class="btn ${danger ? 'danger' : 'primary'}" data-cf="yes">${esc(confirmLabel)}</button></div></div>`);
+      let answer = false;
+      d.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-cf]');
+        if (b) { answer = b.dataset.cf === 'yes'; d.close(); }
+      });
+      d.addEventListener('close', () => resolve(answer), { once: true });
+    });
+  }
+
+  // ---- PIN dialog ----
+  // Resolves { status: 'ok' | 'skip' | 'cancel' | 'reset', pin? }.
+  const pinFails = {};
+  function pinDialog({ member, mode, title, subtitle, allowSkip = false }) {
+    return new Promise((resolve) => {
+      let step = mode; // 'verify' | 'create' | 'confirm'
+      let digits = '';
+      let first = '';
+      let settled = false;
+      const d = makeDialog();
+
+      const finish = (result) => { if (settled) return; settled = true; d.close(); resolve(result); };
+      const dotsHtml = () => Array.from({ length: PIN_LENGTH }, (_, i) => `<i class="${i < digits.length ? 'on' : ''}"></i>`).join('');
+      const paintDots = () => { $('.pin-dots', d).innerHTML = dotsHtml(); };
+      const setMsg = (m) => { $('.err', d).textContent = m || ''; };
+      const shake = () => { const el = $('.pin-dots', d); el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); };
+
+      function draw(msg = '') {
+        const heading = step === 'confirm' ? 'Confirm your PIN' : title;
+        const sub = step === 'confirm' ? 'Enter the same 4 digits again.' : subtitle;
+        const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((k) => `<button type="button" class="key" data-k="${k}">${k}</button>`).join('');
+        d.innerHTML = `<div class="dlg" role="group" aria-label="PIN entry">
+          <div class="pin-who"><span class="avatar lg" style="--c:${member.color}">${esc(member.name[0])}</span><h2>${esc(heading)}</h2><p class="muted">${esc(sub)}</p></div>
+          <div class="pin-dots" aria-label="${digits.length} of ${PIN_LENGTH} digits entered">${dotsHtml()}</div>
+          <p class="err" role="alert">${esc(msg)}</p>
+          <div class="keypad">${keys}<span class="key blank"></span><button type="button" class="key" data-k="0">0</button>
+            <button type="button" class="key util" data-k="back" aria-label="Delete last digit">${ico('backspace', 22)}</button></div>
+          <div class="pin-links">
+            <button type="button" class="link-btn" data-pin="cancel">Cancel</button>
+            ${mode === 'verify' ? '<button type="button" class="link-btn" data-pin="forgot">Forgot PIN?</button>' : ''}
+            ${allowSkip && step !== 'confirm' ? '<button type="button" class="link-btn" data-pin="skip">Skip for now</button>' : ''}
+          </div></div>`;
+      }
+
+      async function submit() {
+        if (step === 'verify') {
+          const lockedUntil = (pinFails[member.id] || {}).until || 0;
+          if (Date.now() < lockedUntil) { digits = ''; paintDots(); setMsg(`Too many tries. Wait ${Math.ceil((lockedUntil - Date.now()) / 1000)} seconds.`); return; }
+          if (await verifyPin(member, digits)) { pinFails[member.id] = { n: 0, until: 0 }; finish({ status: 'ok' }); return; }
+          const rec = pinFails[member.id] || { n: 0, until: 0 };
+          rec.n += 1;
+          if (rec.n >= MAX_PIN_TRIES) { rec.n = 0; rec.until = Date.now() + PIN_LOCK_MS; }
+          pinFails[member.id] = rec;
+          digits = ''; paintDots(); shake();
+          setMsg(rec.until > Date.now() ? 'Too many tries. Wait 30 seconds.' : 'That PIN is not right. Try again.');
+        } else if (step === 'create') {
+          first = digits; digits = ''; step = 'confirm'; draw();
+        } else {
+          if (digits === first) { finish({ status: 'ok', pin: digits }); return; }
+          digits = ''; first = ''; step = 'create'; draw('The PINs did not match. Start again.'); shake();
+        }
+      }
+
+      function press(k) {
+        if (k === 'back') { digits = digits.slice(0, -1); paintDots(); return; }
+        if (digits.length >= PIN_LENGTH) return;
+        digits += k; paintDots(); setMsg('');
+        if (digits.length === PIN_LENGTH) setTimeout(submit, 140);
+      }
+
+      d.addEventListener('click', async (e) => {
+        const key = e.target.closest('[data-k]');
+        if (key) { press(key.dataset.k); return; }
+        const act = e.target.closest('[data-pin]');
+        if (!act) return;
+        if (act.dataset.pin === 'cancel') finish({ status: 'cancel' });
+        if (act.dataset.pin === 'skip') finish({ status: 'skip' });
+        if (act.dataset.pin === 'forgot') {
+          settled = true; d.close();
+          const yes = await confirmDialog({
+            title: `Reset ${member.name}'s PIN?`,
+            message: `Because PINs live only on this device, resetting removes ${member.name}'s PIN and erases ${member.name}'s private tasks. Shared family tasks are not affected.`,
+            confirmLabel: 'Reset and erase',
+          });
+          if (yes) {
+            member.pin = null;
+            state.privateTasks[member.id] = [];
+            persist();
+            resolve({ status: 'reset' });
+          } else { resolve({ status: 'cancel' }); }
+        }
+      });
+      d.addEventListener('keydown', (e) => {
+        if (/^[0-9]$/.test(e.key)) press(e.key);
+        else if (e.key === 'Backspace') press('back');
+      });
+      d.addEventListener('close', () => { if (!settled) { settled = true; resolve({ status: 'cancel' }); } }, { once: true });
+
+      draw();
+    });
+  }
+
+  /* ======================================================================
+     8. ACTIONS, EVENTS, BOOT
+     ====================================================================== */
+  function applyTheme() {
+    const pref = state.prefs.theme;
+    const dark = pref === 'dark' || (pref === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', dark ? '#0e1613' : '#1f5c4a');
+  }
+
+  function render() {
+    const app = $('#app');
+    if (!session.memberId) {
+      app.innerHTML = pickerView();
+      document.title = 'Family Tasks';
+      return;
+    }
+    const view = currentView();
+    const views = {
+      dashboard: dashboardView, family: familyView, stats: statsView, settings: settingsView,
+      tasks: () => tasksView('family'), private: () => tasksView('private'),
+    };
+    app.innerHTML = shell(views[view](), view);
+    document.title = `${NAV.find((n) => n.id === view).label} · Family Tasks`;
+  }
+
+  function refreshList(scope) { const box = $('#task-list'); if (box) box.innerHTML = taskListHtml(scope); }
+
+  async function setPin(member, pin) {
+    member.pin = await makePin(pin);
+    persist();
+  }
+
+  async function login(memberId) {
+    const m = S.member(memberId);
+    if (!m) return;
+    if (m.pin) {
+      let r = await pinDialog({ member: m, mode: 'verify', title: `Hi ${m.name}`, subtitle: 'Enter your PIN to open your space.' });
+      if (r.status === 'reset') r = { status: 'restart' };
+      else if (r.status !== 'ok') return;
+      if (r.status === 'restart') {
+        const c = await pinDialog({ member: m, mode: 'create', title: `Set a new PIN, ${m.name}`, subtitle: 'Choose 4 digits to protect your private tasks.', allowSkip: true });
+        if (c.status === 'cancel') return;
+        if (c.status === 'ok') await setPin(m, c.pin);
+      }
+    } else {
+      const c = await pinDialog({ member: m, mode: 'create', title: `Set a PIN, ${m.name}`, subtitle: 'Choose 4 digits to protect your private tasks.', allowSkip: true });
+      if (c.status === 'cancel') return;
+      if (c.status === 'ok') await setPin(m, c.pin);
+    }
+    session.memberId = m.id;
+    state.prefs.lastMemberId = m.id;
+    persist();
+    if (location.hash !== '#/dashboard') location.hash = '#/dashboard';
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  async function changePin() {
+    const me = S.me();
+    if (me.pin) {
+      const v = await pinDialog({ member: me, mode: 'verify', title: 'Enter your current PIN', subtitle: 'Then you can choose a new one.' });
+      if (v.status !== 'ok') return;
+    }
+    const c = await pinDialog({ member: me, mode: 'create', title: me.pin ? 'Choose a new PIN' : 'Set a PIN', subtitle: 'Choose 4 digits to protect your private tasks.' });
+    if (c.status !== 'ok') return;
+    await setPin(me, c.pin);
+    render();
+    toast('PIN saved');
+  }
+
+  async function removePin() {
+    const me = S.me();
+    const v = await pinDialog({ member: me, mode: 'verify', title: 'Enter your PIN', subtitle: 'Confirm it is you before removing the PIN.' });
+    if (v.status !== 'ok') return;
+    me.pin = null; persist(); render(); toast('PIN removed');
+  }
+
+  function exportData() {
+    const me = S.me();
+    const payload = {
+      app: 'family-task-manager', schemaVersion: SCHEMA_VERSION, exportedAt: new Date().toISOString(),
+      memberId: me.id, familyTasks: S.family(), privateTasks: S.myPrivate(),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const file = new File([blob], `family-tasks-${me.id}-${todayStr()}.json`, { type: 'application/json' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: 'Family Tasks backup' }).catch(() => {});
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = file.name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast('Backup file saved');
+  }
+
+  function importData(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(String(reader.result));
+        if (data.app !== 'family-task-manager') throw new Error('bad file');
+        const merge = (list, incoming) => {
+          let n = 0;
+          (Array.isArray(incoming) ? incoming : []).forEach((t) => {
+            if (!t || typeof t.title !== 'string' || !PRIORITY[t.priority]) return;
+            t.id = t.id || uid();
+            t.createdAt = t.createdAt || new Date().toISOString();
+            const i = list.findIndex((x) => x.id === t.id);
+            if (i > -1) list[i] = t; else list.push(t);
+            n += 1;
+          });
+          return n;
+        };
+        const n = merge(S.family(), data.familyTasks) + merge(S.myPrivate(), data.privateTasks);
+        persist(); render(); toast(`Imported ${plural(n, 'task')}`);
+      } catch (err) {
+        toast('That file is not a Family Tasks backup.');
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function addSamples() {
+    const ex = [
+      ['Pay the electricity and gas bills', 'Both bills are due this week.', 'dad', 'high', 2, 'Bills', false],
+      ['Buy groceries for the week', 'Vegetables, milk, rice and cooking oil.', 'mom', 'medium', 1, 'Errands', false],
+      ['Submit Assignment 3', '', 'fawad', 'high', 3, 'Study', false],
+      ['Send thesis draft to supervisor', 'Chapter 4 with the updated figures.', 'hammad', 'high', 5, 'Study', false],
+      ['Prepare herbarium sheets for lab', '', 'tayyaba', 'medium', 4, 'Study', false],
+      ['Practice typing for 30 minutes', '', 'areeba', 'low', 0, 'Study', false],
+      ['Family dinner on Friday', 'Decide the menu together.', 'all', 'medium', 6, 'Events', false],
+      ['Clean the water tank', '', 'mom', 'medium', -2, 'Home', true],
+    ];
+    ex.forEach(([title, description, assigneeId, priority, days, category, completed]) => {
+      state.familyTasks.push({
+        id: uid(), title, description, assigneeId, priority, dueDate: addDays(days), category,
+        completed, completedAt: completed ? new Date().toISOString() : null,
+        createdAt: new Date().toISOString(), createdBy: session.memberId,
+      });
+    });
+    persist(); render(); toast('Sample tasks added');
+  }
+
+  async function onClick(e) {
+    const el = e.target.closest('[data-action], [data-close]');
+    if (!el) return;
+    if (el.hasAttribute('data-close')) { const dlg = el.closest('dialog'); if (dlg) dlg.close(); return; }
+    const { action, scope, id } = el.dataset;
+    switch (action) {
+      case 'pick': login(id); break;
+      case 'lock': session.memberId = null; render(); window.scrollTo(0, 0); break;
+      case 'open-member':
+        if (id === session.memberId) location.hash = '#/dashboard'; else login(id);
+        break;
+      case 'add-task': openTaskDialog(scope); break;
+      case 'edit-task': openTaskDialog(scope, id); break;
+      case 'toggle': Repo.toggle(scope, id); render(); break;
+      case 'delete-task': {
+        const t = Repo.find(scope, id);
+        if (!t) break;
+        const ok = await confirmDialog({
+          title: 'Delete this task?',
+          message: scope === 'family' ? `“${t.title}” will be removed for everyone in the family.` : `“${t.title}” will be removed from your private tasks.`,
+        });
+        if (ok) { Repo.remove(scope, id); render(); toast('Task deleted'); }
+        break;
+      }
+      case 'clear-filters':
+        Object.assign(ui[currentView() === 'private' ? 'private' : 'family'], { q: '', person: 'all', priority: 'all', status: 'all', category: 'all' });
+        render();
+        break;
+      case 'set-pin': changePin(); break;
+      case 'remove-pin': removePin(); break;
+      case 'export': exportData(); break;
+      case 'import': $('#import-file').click(); break;
+      case 'sample': addSamples(); break;
+      case 'install':
+        if (deferredInstall) { deferredInstall.prompt(); await deferredInstall.userChoice; deferredInstall = null; render(); }
+        break;
+      case 'reset': {
+        const ok = await confirmDialog({ title: 'Erase everything?', message: 'All family tasks, private tasks, PINs and settings on this device will be deleted. This cannot be undone.', confirmLabel: 'Erase everything' });
+        if (ok) { Storage.clear(); state = defaultState(); session.memberId = null; location.hash = ''; applyTheme(); render(); }
+        break;
+      }
+      default: break;
+    }
+  }
+
+  function onInput(e) {
+    if (e.target.id === 'task-q') { ui[e.target.dataset.scope].q = e.target.value; refreshList(e.target.dataset.scope); }
+  }
+
+  function onChange(e) {
+    const t = e.target;
+    if (t.dataset && t.dataset.filter) { ui[t.dataset.scope][t.dataset.filter] = t.value; refreshList(t.dataset.scope); return; }
+    if (t.name === 'theme') { state.prefs.theme = t.value; persist(); applyTheme(); }
+    if (t.id === 'import-file' && t.files[0]) { importData(t.files[0]); t.value = ''; }
+  }
+
+  function registerServiceWorker() {
+    if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
+    navigator.serviceWorker.register('sw.js').catch(() => { /* offline support is optional */ });
+  }
+
+  function boot() {
+    state = normalize(Storage.load());
+    applyTheme();
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+    document.addEventListener('click', onClick);
+    document.addEventListener('input', onInput);
+    document.addEventListener('change', onChange);
+    window.addEventListener('hashchange', () => {
+      if (!session.memberId) return;
+      render(); window.scrollTo(0, 0);
+      const main = $('#main'); if (main) main.focus({ preventScroll: true });
+    });
+    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstall = e; if (session.memberId && currentView() === 'settings') render(); });
+    registerServiceWorker();
+    render();
+  }
+
+  boot();
+})();
+
+  </script>
+</body>
+</html>
