@@ -143,7 +143,7 @@ window.addEventListener("error",function(e){var a=document.getElementById("app")
       else if(a==='switch-member'){setToken(null);current=null;data=null;render()}
       else if(a==='logout'){await rpc('ff_logout',{p_token:getToken()});setToken(null);current=null;data=null;render()}
       else if(a==='theme'){const d=document.documentElement.dataset.theme==='dark'?'light':'dark';localStorage.setItem('familyflow-theme',d);render()}
-      else if(a==='complete'){if(!confirm('Complete this task? the task's points will move from the person who assigned it to you.'))return;await rpc('ff_complete_task',{p_token:getToken(),p_task_id:id});await loadDashboard();render();showToast('Task completed — points added to you.')}
+      else if(a==='complete'){if(!confirm('Complete this task? The task points will move from the person who assigned it to you.'))return;await rpc('ff_complete_task',{p_token:getToken(),p_task_id:id});await loadDashboard();render();showToast('Task completed — points added to you.')}
       else if(a==='reject'){if(!confirm('Reject this task? You will give 10 points to the person who assigned it.'))return;await rpc('ff_reject_task',{p_token:getToken(),p_task_id:id});await loadDashboard();render();showToast('Task rejected — points transferred.')}
       else if(a==='delete'){if(!confirm('Delete this pending task?'))return;await rpc('ff_delete_task',{p_token:getToken(),p_task_id:id});await loadDashboard();render();showToast('Task deleted.')}
     }catch(err){showToast(err.message)}
