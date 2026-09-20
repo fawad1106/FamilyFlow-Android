@@ -20,45 +20,138 @@
 <div id="toast" class="toast hide"></div>
 <script>
 (()=> {
-  const KEY='familyflow-v3';
-  const people=[['dad','Dad'],['mom','Mom'],['fawad','Fawad'],['hammad','Hammad'],['tayyaba','Tayyaba'],['areeba','Areeba']];
-  const colors=['#2d7a61','#b85b50','#4c6f9f','#8b6a32','#76559a','#3f8290'];
-  const cats=['Chores','School','Study','Bills','Shopping','Home','Health','Events','Other'];
-  const nav=[['dashboard','⌂','Dashboard'],['tasks','✓','Tasks'],['calendar','▦','Calendar'],['family','♧','Family'],['stats','★','Stats'],['settings','⚙','Settings']];
-  let view=location.hash.slice(2)||'dashboard';
-  let filter={q:'',person:'all',status:'all'};
-  let state;
-  try{state=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){state=null}
-  if(!state||!Array.isArray(state.tasks))state={tasks:[],points:{},activity:[],theme:'light',currentMember:null};
-  if(!Object.prototype.hasOwnProperty.call(state,'currentMember'))state.currentMember=null;
-  people.forEach(p=>{if(typeof state.points[p[0]]!=='number')state.points[p[0]]=0});
-  function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
-  function esc(v){return String(v==null?'':v).replace(/[&<>"]/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]})}
+  const SB_URL='https://jsjiysgwymeuugjipyil.supabase.co';
+  const SB_KEY='sb_publishable_NGo65OXNEWzmJqSBy9KGuw_kwFQMDAq';
+  const SESSION_KEY='familyflow-session';
+  const peopleColors=['#2d7a61','#b85b50','#4c6f9f','#8b6a32','#76559a','#3f8290'];
+  const nav=[['dashboard','⌂','Dashboard'],['tasks','✓','Tasks'],['family','♧','Family'],['stats','★','Achievements'],['settings','⚙','Settings']];
+  let view=location.hash.slice(2)||'dashboard', data=null, members=[], current=null, filter={q:'',status:'all'}, loading=false;
+
+  async function rpc(name,args){
+    const r=await fetch(SB_URL+'/rest/v1/rpc/'+name,{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify(args||{})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(j.message||j.error_description||j.hint||'Request failed');
+    return j;
+  }
+  function esc(v){return String(v==null?'':v).replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]))}
+  function showToast(s){const t=document.getElementById('toast');t.textContent=s;t.classList.remove('hide');setTimeout(()=>t.classList.add('hide'),2800)}
+  function avatar(name,i){return '<span class="avatar" style="--c:'+peopleColors[i%peopleColors.length]+'">'+esc((name||'?')[0])+'</span>'}
+  function memberById(id){return members.find(x=>x.id===id)||{id:'',name:'Unknown',initialized:false}}
+  function fmtDate(v){return v?new Date(v).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'No date'}
   function today(){return new Date().toISOString().slice(0,10)}
-  function uid(){return 't'+Date.now()+Math.random().toString(16).slice(2)}
-  function person(id){return people.find(function(p){return p[0]===id})||['','Everyone']}
-  function log(text,member){state.activity.unshift({text:text,member:member||'',date:new Date().toISOString()});state.activity=state.activity.slice(0,50)}
-  function taskHtml(t){var p=person(t.assignee),idx=Math.max(0,people.findIndex(function(x){return x[0]===t.assignee}));return '<article class="task '+(t.done?'done':'')+'" style="--c:'+colors[idx]+'"><button class="check '+(t.done?'on':'')+'" data-act="toggle" data-id="'+esc(t.id)+'">'+(t.done?'✓':'')+'</button><div><div class="task-name">'+esc(t.title)+'</div>'+(t.description?'<div class="desc">'+esc(t.description)+'</div>':'')+'<div class="meta"><span class="badge">'+esc(t.priority||'medium')+'</span><span class="badge">'+esc(t.category||'General')+'</span><span class="badge">'+esc(p[1])+'</span>'+(t.due?'<span class="badge">'+esc(t.due)+'</span>':'')+'</div></div><div class="task-actions"><button class="icon" data-act="edit" data-id="'+esc(t.id)+'">✎</button><button class="icon" data-act="delete" data-id="'+esc(t.id)+'">×</button></div></article>'}
-  function list(){return state.tasks.filter(function(t){return (!filter.q||String(t.title).toLowerCase().includes(filter.q.toLowerCase()))&&(filter.person==='all'||t.assignee===filter.person)&&(filter.status==='all'||(filter.status==='open'&&!t.done)||(filter.status==='done'&&t.done))})}
-  function feed(){return '<div class="card feed">'+(state.activity.slice(0,10).map(function(a){return '<div class="feed-item"><div class="avatar" style="width:34px;height:34px">'+esc(person(a.member)[1][0])+'</div><div><b>'+esc(a.text)+'</b><div class="desc">'+new Date(a.date).toLocaleString()+'</div></div></div>'}).join('')||'<div class="empty">No activity yet.</div>')+'</div>'}
-  function dashboard(){var done=state.tasks.filter(function(t){return t.done}).length,total=state.tasks.length,pct=total?Math.round(done/total*100):0;return '<div class="hero"><div><p>FamilyFlow</p><h2>Family tasks, together.</h2><p>'+pct+'% complete.</p><div class="progress"><i style="width:'+pct+'%"></i></div></div><button class="btn" data-act="add">＋ Add task</button></div><div class="grid stats"><div class="card stat"><b>'+state.tasks.filter(function(t){return !t.done}).length+'</b><span>Open tasks</span></div><div class="card stat"><b>'+done+'</b><span>Completed</span></div><div class="card stat"><b>'+state.tasks.filter(function(t){return !t.done&&t.due&&t.due<today()}).length+'</b><span>Overdue</span></div><div class="card stat"><b>'+Object.values(state.points).reduce(function(a,b){return a+b},0)+'</b><span>Family points</span></div></div><div class="section"><div class="section-head"><h2>Tasks</h2><button class="btn" data-nav="tasks">View all</button></div><div class="tasks">'+(state.tasks.slice(0,6).map(taskHtml).join('')||'<div class="empty">No tasks yet. Add your first family task.</div>')+'</div></div><div class="section"><h2>Family activity</h2>'+feed()+'</div>'}
-  function tasks(){return '<div class="filters"><input class="input" id="search" placeholder="Search tasks..." value="'+esc(filter.q)+'"><select class="select" data-filter="person"><option value="all">Everyone</option>'+people.map(function(p){return '<option value="'+p[0]+'" '+(filter.person===p[0]?'selected':'')+'>'+p[1]+'</option>'}).join('')+'</select><select class="select" data-filter="status"><option value="all">All status</option><option value="open" '+(filter.status==='open'?'selected':'')+'>Open</option><option value="done" '+(filter.status==='done'?'selected':'')+'>Completed</option></select></div><div class="tasks">'+(list().map(taskHtml).join('')||'<div class="empty">No tasks found.</div>')+'</div>'}
-  function family(){return '<div class="grid members">'+people.map(function(p,i){var ts=state.tasks.filter(function(t){return t.assignee===p[0]}),d=ts.filter(function(t){return t.done}).length;return '<div class="member" style="--c:'+colors[i]+'"><div class="member-head"><div class="avatar">'+p[1][0]+'</div><div><h3>'+p[1]+'</h3><small>'+d+'/'+ts.length+' tasks complete</small></div></div><div class="member-nums"><span><b>'+state.points[p[0]]+'</b><small>points</small></span><span><b>'+ts.filter(function(t){return !t.done}).length+'</b><small>open</small></span></div></div>'}).join('')+'</div><div class="section"><h2>Activity</h2>'+feed()+'</div>'}
-  function calendar(){var ds=today();return '<div class="card"><h2>'+new Date().toLocaleDateString(undefined,{month:'long',year:'numeric'})+'</h2><div class="tasks" style="margin-top:15px">'+(state.tasks.filter(function(t){return t.due===ds}).map(taskHtml).join('')||'<div class="empty">No tasks due today.</div>')+'</div></div>'}
-  function stats(){var total=state.tasks.length,done=state.tasks.filter(function(t){return t.done}).length;return '<div class="grid stats"><div class="card stat"><b>'+total+'</b><span>Total tasks</span></div><div class="card stat"><b>'+done+'</b><span>Completed</span></div><div class="card stat"><b>'+Math.round(done/(total||1)*100)+'%</b><span>Completion rate</span></div><div class="card stat"><b>'+Object.values(state.points).reduce(function(a,b){return a+b},0)+'</b><span>Points</span></div></div><div class="section"><h2>Activity</h2>'+feed()+'</div>'}
-  function settings(){return '<div class="grid"><div class="card"><h2>Appearance</h2><p class="desc">Choose the theme.</p><select id="theme" class="select"><option value="light" '+(state.theme==='light'?'selected':'')+'>Light</option><option value="dark" '+(state.theme==='dark'?'selected':'')+'>Dark</option></select></div><div class="card"><h2>Family profiles</h2><p class="desc">Occupation/profession descriptions have been removed.</p><div class="meta">'+people.map(function(p){return '<span class="badge">'+p[1]+'</span>'}).join('')+'</div></div></div>'}
-  function profileScreen(){return '<main class="profile-screen"><section class="profile-box"><div class="profile-brand"><i>✓</i>FamilyFlow</div><h1>Who is using FamilyFlow?</h1><p>Select your profile to continue. You can switch members anytime.</p><div class="profile-grid">'+people.map(function(p,i){return '<button class="profile-choice" data-member="'+p[0]+'"><span class="avatar" style="background:'+colors[i]+'">'+p[1][0]+'</span><span><b>'+p[1]+'</b><small>Family member</small></span></button>'}).join('')+'</div></section></main>'}
-  function shell(body){var title=(nav.find(function(n){return n[0]===view})||nav[0])[2];var cp=person(state.currentMember);var ci=Math.max(0,people.findIndex(function(x){return x[0]===state.currentMember}));return '<div class="layout"><aside class="side"><div class="logo"><i>✓</i>FamilyFlow</div><div class="nav">'+nav.map(function(n){return '<button class="'+(view===n[0]?'active':'')+'" data-nav="'+n[0]+'">'+n[1]+' &nbsp; '+n[2]+'</button>'}).join('')+'</div><div class="side-bottom"><button class="btn primary" style="width:100%" data-act="add">＋ Add task</button></div></aside><main class="main"><header class="top"><div class="title"><h1>'+title+'</h1><p>'+new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'})+'</p></div><div class="actions"><div class="current-member"><span class="avatar" style="background:'+colors[ci]+'">'+esc(cp[1][0])+'</span><span>'+esc(cp[1])+'</span><button class="profile-switch" data-act="switch-member">Switch</button></div><button class="btn" data-act="theme">☾</button><button class="btn primary" data-act="add">＋ Add task</button></div></header>'+body+'</main></div><nav class="mobile-nav">'+nav.slice(0,5).map(function(n){return '<button class="'+(view===n[0]?'active':'')+'" data-nav="'+n[0]+'">'+n[1]+'<br>'+n[2]+'</button>'}).join('')+'</nav>'}
-  function render(){document.documentElement.dataset.theme=state.theme==='dark'?'dark':'light';document.getElementById('app').innerHTML=state.currentMember?shell(view==='dashboard'?dashboard():view==='tasks'?tasks():view==='calendar'?calendar():view==='family'?family():view==='stats'?stats():settings()):profileScreen()}
-  function modal(task){task=task||{title:'',description:'',assignee:'dad',priority:'medium',due:today(),category:'Chores',points:10};document.getElementById('modal').innerHTML='<form id="taskform"><div class="modal-head"><h2>'+ (task.id?'Edit task':'New family task') +'</h2><button type="button" class="icon" data-act="close">×</button></div><div class="fields"><div><label class="label">Task title</label><input class="input" name="title" required value="'+esc(task.title)+'"></div><div><label class="label">Description</label><textarea class="textarea" name="description">'+esc(task.description||'')+'</textarea></div><div class="row"><div><label class="label">Assigned to</label><select class="select" name="assignee">'+people.map(function(p){return '<option value="'+p[0]+'" '+(task.assignee===p[0]?'selected':'')+'>'+p[1]+'</option>'}).join('')+'</select></div><div><label class="label">Priority</label><select class="select" name="priority">'+['high','medium','low'].map(function(x){return '<option '+(task.priority===x?'selected':'')+'>'+x+'</option>'}).join('')+'</select></div></div><div class="row"><div><label class="label">Due date</label><input class="input" type="date" name="due" value="'+esc(task.due||'')+'"></div><div><label class="label">Category</label><select class="select" name="category">'+cats.map(function(x){return '<option '+(task.category===x?'selected':'')+'>'+x+'</option>'}).join('')+'</select></div></div><div><label class="label">Points</label><input class="input" type="number" name="points" min="1" max="500" value="'+(task.points||10)+'"></div></div><div class="modal-foot"><button type="button" class="btn" data-act="close">Cancel</button><button class="btn primary">Save task</button></div></form>';document.getElementById('modal').hidden=false;window.editId=task.id||null}
-  function closeModal(){document.getElementById('modal').hidden=true;window.editId=null}
-  document.addEventListener('click',function(e){var pc=e.target.closest('[data-member]');if(pc){state.currentMember=pc.dataset.member;save();render();return}var n=e.target.closest('[data-nav]');if(n){view=n.dataset.nav;location.hash='#/'+view;render();return}var b=e.target.closest('[data-act]');if(!b)return;var a=b.dataset.act,id=b.dataset.id;if(a==='add')modal();else if(a==='close')closeModal();else if(a==='switch-member'){state.currentMember=null;save();render()}else if(a==='theme'){state.theme=state.theme==='dark'?'light':'dark';save();render()}else if(a==='toggle'){var t=state.tasks.find(function(x){return x.id===id});if(t){t.done=!t.done;if(t.done)state.points[t.assignee]=(state.points[t.assignee]||0)+(t.points||10);log((t.done?'Completed ':'Reopened ')+t.title,t.assignee);save();render()}}else if(a==='edit'){var t=state.tasks.find(function(x){return x.id===id});if(t)modal(t)}else if(a==='delete'){if(confirm('Delete this task?')){state.tasks=state.tasks.filter(function(x){return x.id!==id});save();render()}}});
-  document.addEventListener('submit',function(e){if(e.target.id!=='taskform')return;e.preventDefault();var f=new FormData(e.target),data={title:String(f.get('title')).trim(),description:String(f.get('description')).trim(),assignee:String(f.get('assignee')),priority:String(f.get('priority')),due:String(f.get('due')),category:String(f.get('category')),points:Number(f.get('points'))||10};if(window.editId){var t=state.tasks.find(function(x){return x.id===window.editId});if(t)Object.assign(t,data);log('Updated '+data.title,data.assignee)}else{state.tasks.push(Object.assign({id:uid(),done:false,created:new Date().toISOString()},data));log('Assigned '+data.title,data.assignee)}save();closeModal();render()});
-  document.addEventListener('input',function(e){if(e.target.id==='search'){filter.q=e.target.value;render()}});
-  document.addEventListener('change',function(e){if(e.target.dataset.filter){filter[e.target.dataset.filter]=e.target.value;render()}if(e.target.id==='theme'){state.theme=e.target.value;save();render()}});
-  window.addEventListener('hashchange',function(){view=location.hash.slice(2)||'dashboard';render()});
-  render();
+  function getToken(){return sessionStorage.getItem(SESSION_KEY)}
+  function setToken(t){if(t)sessionStorage.setItem(SESSION_KEY,t);else sessionStorage.removeItem(SESSION_KEY)}
+  async function loadMembers(){members=await rpc('ff_list_members',{});}
+  async function loadDashboard(){data=await rpc('ff_dashboard',{p_token:getToken()});current=data.member}
+  function go(v){view=v;location.hash='#/'+v;render()}
+
+  function profileScreen(){
+    return '<main class="profile-screen"><section class="profile-box"><div class="profile-brand"><i>✓</i>FamilyFlow</div><h1>Who is using FamilyFlow?</h1><p>Select your profile. Your account has its own PIN, points, achievements and task history.</p><div class="profile-grid">'+members.map((m,i)=>'<button class="profile-choice" data-member="'+m.id+'">'+avatar(m.name,i)+'<span><b>'+esc(m.name)+'</b><small>'+(m.initialized?'Enter PIN to sign in':'Create your PIN')+'</small></span></button>').join('')+'</div></section></main>';
+  }
+  function pinScreen(m){
+    const first=!m.initialized;
+    return '<main class="profile-screen"><section class="profile-box"><button class="btn ghost" data-act="back-members">← Change member</button><div class="profile-brand" style="margin-top:18px">'+avatar(m.name,members.indexOf(m))+'<span>'+esc(m.name)+'</span></div><h1>'+(first?'Create your PIN':'Enter your PIN')+'</h1><p>'+(first?'Choose a 4–8 digit PIN. You will start with 50 points.':'Enter your personal PIN to open your FamilyFlow account.')+'</p><form id="pinform"><input class="input" name="pin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" minlength="4" maxlength="8" autocomplete="'+(first?'new-password':'current-password')+'" placeholder="4–8 digit PIN" required><div class="modal-foot"><button class="btn primary">'+(first?'Create account':'Log in')+'</button></div></form></section></main>';
+  }
+
+  function taskCard(t,actions){
+    const ass=memberById(t.assignee_id), asg=memberById(t.assigner_id), i=Math.max(0,members.findIndex(m=>m.id===t.assignee_id));
+    const done=t.status==='completed', rejected=t.status==='rejected';
+    return '<article class="task '+(done||rejected?'done':'')+'" style="--c:'+peopleColors[i]+'"><div class="check '+(done?'on':'')+'">'+(done?'✓':rejected?'×':'')+'</div><div><div class="task-name">'+esc(t.title)+'</div>'+(t.description?'<div class="desc">'+esc(t.description)+'</div>':'')+'<div class="meta"><span class="badge">'+esc(t.priority||'medium')+'</span><span class="badge">'+esc(t.category||'General')+'</span><span class="badge">From: '+esc(asg.name)+'</span><span class="badge">To: '+esc(ass.name)+'</span>'+(t.due_date?'<span class="badge">'+esc(t.due_date)+'</span>':'')+(done?'<span class="badge">Completed</span>':'')+(rejected?'<span class="badge">Rejected</span>':'')+'</div></div>'+(actions||'')+'</article>';
+  }
+
+  function dashboard(){
+    const mine=data.assigned_to_me||[], assigned=data.assigned_by_me||[], hist=data.history||[], a=data.achievements||{}, points=data.member.points||0;
+    const completed=a.completed||0, rejected=a.rejected||0, assignedCount=a.assigned||0;
+    return '<div class="hero"><div><p>Welcome back, '+esc(data.member.name)+'</p><h2>Your FamilyFlow</h2><p>'+points+' points · '+completed+' completed · '+rejected+' rejected</p><div class="progress"><i style="width:'+Math.min(100,completed*10)+'%"></i></div></div><button class="btn" data-act="add">＋ Assign task</button></div>'+
+      '<div class="grid stats"><div class="card stat"><b>'+points+'</b><span>My points</span></div><div class="card stat"><b>'+mine.length+'</b><span>Assigned to me</span></div><div class="card stat"><b>'+assigned.length+'</b><span>Assigned by me</span></div><div class="card stat"><b>'+assignedCount+'</b><span>Total assigned</span></div></div>'+
+      '<div class="section"><div class="section-head"><h2>Tasks assigned to me</h2><button class="btn" data-nav="tasks">View all</button></div><div class="tasks">'+(mine.length?mine.map(t=>taskCard(t,'<div class="task-actions"><button class="btn primary" data-act="complete" data-id="'+t.id+'">✓ Done</button><button class="btn danger" data-act="reject" data-id="'+t.id+'">Reject</button></div>')).join(''):'<div class="empty">No tasks are currently assigned to you.</div>')+'</div></div>'+
+      '<div class="section"><div class="section-head"><h2>Tasks I assigned</h2></div><div class="tasks">'+(assigned.length?assigned.map(t=>taskCard(t,'<div class="task-actions"><button class="icon" data-act="delete" data-id="'+t.id+'">×</button></div>')).join(''):'<div class="empty">You have not assigned any pending tasks.</div>')+'</div></div>'+
+      '<div class="section"><div class="section-head"><h2>My achievements</h2></div><div class="grid stats"><div class="card stat"><b>'+completed+'</b><span>Tasks completed</span></div><div class="card stat"><b>'+rejected+'</b><span>Tasks rejected</span></div><div class="card stat"><b>'+a.finished_points+'</b><span>Points earned from work</span></div><div class="card stat"><b>'+hist.length+'</b><span>History items</span></div></div></div>';
+  }
+
+  function tasks(){
+    let mine=data.assigned_to_me||[], assigned=data.assigned_by_me||[];
+    if(filter.q){const q=filter.q.toLowerCase();mine=mine.filter(t=>t.title.toLowerCase().includes(q));assigned=assigned.filter(t=>t.title.toLowerCase().includes(q))}
+    return '<div class="filters"><input class="input" id="search" placeholder="Search your tasks..." value="'+esc(filter.q)+'"><select class="select" id="tasktab"><option value="mine">Assigned to me</option><option value="assigned">Assigned by me</option></select></div><div id="tasklist"></div>';
+  }
+  function family(){
+    return '<div class="grid members">'+members.map((m,i)=>'<div class="member" style="--c:'+peopleColors[i%peopleColors.length]+'"><div class="member-head">'+avatar(m.name,i)+'<div><h3>'+esc(m.name)+'</h3><small>'+(m.id===current.id?'Current member':'Family member')+'</small></div></div><div class="member-nums"><span><b>'+(m.id===current.id?data.member.points:'—')+'</b><small>points</small></span><span><b>'+(m.id===current.id?(data.achievements?.completed||0):'—')+'</b><small>completed</small></span></div></div>').join('')+'</div>';
+  }
+  function stats(){
+    const a=data.achievements||{},tx=data.transactions||[];
+    return '<div class="grid stats"><div class="card stat"><b>'+data.member.points+'</b><span>Current points</span></div><div class="card stat"><b>'+(a.completed||0)+'</b><span>Completed</span></div><div class="card stat"><b>'+(a.rejected||0)+'</b><span>Rejected</span></div><div class="card stat"><b>'+(a.finished_points||0)+'</b><span>Earned from tasks</span></div></div><div class="section"><div class="section-head"><h2>Points history</h2></div><div class="card feed">'+(tx.length?tx.map(x=>'<div class="feed-item"><div class="points">'+(x.to_name===current.name?'+':'−')+x.amount+'</div><div><b>'+esc(x.reason==='task_completed'?'Task completed':'Task rejected')+'</b><div class="desc">'+esc(x.from_name||'')+' → '+esc(x.to_name||'')+' · '+fmtDate(x.created_at)+'</div></div></div>').join(''):'<div class="empty">No points transactions yet.</div>')+'</div></div>';
+  }
+  function settings(){return '<div class="grid"><div class="card"><h2>Account</h2><p class="desc">Signed in as <b>'+esc(current.name)+'</b>.</p><button class="btn danger" data-act="logout">Log out</button></div><div class="card"><h2>Security</h2><p class="desc">Your PIN is stored as a secure hash in the backend. It is never displayed here.</p></div><div class="card"><h2>Family profiles</h2><p class="desc">Occupation/profession descriptions remain removed.</p></div></div>'}
+
+  function shell(body){
+    const ci=Math.max(0,members.findIndex(m=>m.id===current.id));
+    return '<div class="layout"><aside class="side"><div class="logo"><i>✓</i>FamilyFlow</div><div class="nav">'+nav.map(n=>'<button class="'+(view===n[0]?'active':'')+'" data-nav="'+n[0]+'">'+n[1]+' &nbsp; '+n[2]+'</button>').join('')+'</div><div class="side-bottom"><button class="btn primary" style="width:100%" data-act="add">＋ Assign task</button></div></aside><main class="main"><header class="top"><div class="title"><h1>'+(nav.find(n=>n[0]===view)||nav[0])[2]+'</h1><p>'+new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'})+'</p></div><div class="actions"><div class="current-member">'+avatar(current.name,ci)+'<span>'+esc(current.name)+'</span><button class="profile-switch" data-act="switch-member">Switch</button></div><button class="btn" data-act="theme">☾</button><button class="btn primary" data-act="add">＋ Assign task</button></div></header>'+body+'</main></div><nav class="mobile-nav">'+nav.map(n=>'<button class="'+(view===n[0]?'active':'')+'" data-nav="'+n[0]+'">'+n[1]+'<br>'+n[2]+'</button>').join('')+'</nav>';
+  }
+
+  function render(){
+    if(!members.length){document.getElementById('app').innerHTML='<main class="profile-screen"><section class="profile-box"><h1>Loading FamilyFlow…</h1></section></main>';return}
+    if(!getToken()){document.getElementById('app').innerHTML=current&&current._pinScreen?pinScreen(current):profileScreen();return}
+    document.documentElement.dataset.theme=localStorage.getItem('familyflow-theme')==='dark'?'dark':'light';
+    let body=view==='dashboard'?dashboard():view==='tasks'?tasks():view==='family'?family():view==='stats'?stats():settings();
+    document.getElementById('app').innerHTML=shell(body);
+    if(view==='tasks')renderTaskList();
+  }
+  function renderTaskList(){
+    const el=document.getElementById('tasklist'),tab=document.getElementById('tasktab');if(!el)return;
+    let arr=tab&&tab.value==='assigned'?(data.assigned_by_me||[]):(data.assigned_to_me||[]);
+    if(filter.q){const q=filter.q.toLowerCase();arr=arr.filter(t=>(t.title||'').toLowerCase().includes(q))}
+    el.innerHTML='<div class="tasks">'+(arr.length?arr.map(t=>taskCard(t,tab&&tab.value==='mine'?'<div class="task-actions"><button class="btn primary" data-act="complete" data-id="'+t.id+'">✓ Done</button><button class="btn danger" data-act="reject" data-id="'+t.id+'">Reject</button></div>':'')).join(''):'<div class="empty">No matching tasks.</div>')+'</div>';
+  }
+
+  function modal(){
+    const opts=members.filter(m=>m.id!==current.id).map(m=>'<option value="'+m.id+'">'+esc(m.name)+'</option>').join('');
+    document.getElementById('modal').innerHTML='<form id="taskform"><div class="modal-head"><h2>Assign a task</h2><button type="button" class="icon" data-act="close">×</button></div><div class="fields"><div><label class="label">Task title</label><input class="input" name="title" required></div><div><label class="label">Description</label><textarea class="textarea" name="description"></textarea></div><div class="row"><div><label class="label">Assign to</label><select class="select" name="assignee" required>'+opts+'</select></div><div><label class="label">Priority</label><select class="select" name="priority"><option>high</option><option selected>medium</option><option>low</option></select></div></div><div class="row"><div><label class="label">Due date</label><input class="input" type="date" name="due" value="'+today()+'"></div><div><label class="label">Category</label><select class="select" name="category"><option>Chores</option><option>School</option><option>Study</option><option>Home</option><option>Shopping</option><option>Other</option></select></div></div><div class="card"><b>Point rule</b><div class="desc">Completing this task transfers 10 points from you to the member who completes it. Rejecting transfers 10 points from the rejecting member back to you.</div></div></div><div class="modal-foot"><button type="button" class="btn" data-act="close">Cancel</button><button class="btn primary">Assign task</button></div></form>';
+    document.getElementById('modal').hidden=false;
+  }
+
+  document.addEventListener('click',async e=>{
+    const pc=e.target.closest('[data-member]');
+    if(pc){current=members.find(m=>m.id===pc.dataset.member);current._pinScreen=true;render();return}
+    const navb=e.target.closest('[data-nav]');if(navb){go(navb.dataset.nav);return}
+    const b=e.target.closest('[data-act]');if(!b)return;
+    const a=b.dataset.act,id=b.dataset.id;
+    try{
+      if(a==='back-members'){current=null;render()}
+      else if(a==='close'){document.getElementById('modal').hidden=true}
+      else if(a==='add'){modal()}
+      else if(a==='switch-member'){setToken(null);current=null;data=null;render()}
+      else if(a==='logout'){await rpc('ff_logout',{p_token:getToken()});setToken(null);current=null;data=null;render()}
+      else if(a==='theme'){const d=document.documentElement.dataset.theme==='dark'?'light':'dark';localStorage.setItem('familyflow-theme',d);render()}
+      else if(a==='complete'){if(!confirm('Complete this task? 10 points will move from the person who assigned it to you.'))return;await rpc('ff_complete_task',{p_token:getToken(),p_task_id:id});await loadDashboard();render();showToast('Task completed — 10 points added to you.')}
+      else if(a==='reject'){if(!confirm('Reject this task? You will give 10 points to the person who assigned it.'))return;await rpc('ff_reject_task',{p_token:getToken(),p_task_id:id});await loadDashboard();render();showToast('Task rejected — 10 points transferred.')}
+      else if(a==='delete'){if(!confirm('Delete this pending task?'))return;await rpc('ff_delete_task',{p_token:getToken(),p_task_id:id});await loadDashboard();render();showToast('Task deleted.')}
+    }catch(err){showToast(err.message)}
+  });
+
+  document.addEventListener('submit',async e=>{
+    if(e.target.id==='pinform'){
+      e.preventDefault();const pin=String(new FormData(e.target).get('pin')).trim();
+      try{const r=current._pinScreen&&current.initialized?await rpc('ff_login_member',{p_member_id:current.id,p_pin:pin}):current._pinScreen?await rpc('ff_register_member',{p_member_id:current.id,p_pin:pin}):null;setToken(r.token);current=r.member;delete current._pinScreen;await loadDashboard();render();showToast(r.member.points===50?'Welcome — 50 starting points added.':'Welcome back!')}catch(err){showToast(err.message)}
+    }
+    if(e.target.id==='taskform'){
+      e.preventDefault();const f=new FormData(e.target);
+      try{await rpc('ff_create_task',{p_token:getToken(),p_title:String(f.get('title')).trim(),p_description:String(f.get('description')||''),p_assignee_id:String(f.get('assignee')),p_due_date:String(f.get('due')||'')||null,p_priority:String(f.get('priority')),p_category:String(f.get('category'))});document.getElementById('modal').hidden=true;await loadDashboard();render();showToast('Task assigned.')}catch(err){showToast(err.message)}
+    }
+  });
+
+  document.addEventListener('input',e=>{if(e.target.id==='search'){filter.q=e.target.value;renderTaskList()}})
+  document.addEventListener('change',e=>{if(e.target.id==='tasktab')renderTaskList()});
+  window.addEventListener('hashchange',()=>{view=location.hash.slice(2)||'dashboard';render()});
+
+  (async()=>{
+    try{
+      await loadMembers();
+      const token=getToken();
+      if(token){try{await loadDashboard()}catch(e){setToken(null);data=null;current=null}}
+      render();
+    }catch(e){document.getElementById('app').innerHTML='<main class="profile-screen"><section class="profile-box"><h1>FamilyFlow could not connect</h1><p class="desc">'+esc(e.message)+'</p><button class="btn primary" onclick="location.reload()">Try again</button></section></main>'}
+  })();
 })();
-</script>
+</script>>
 </body>
 </html>
