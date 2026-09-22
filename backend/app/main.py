@@ -7,7 +7,7 @@ import smtplib
 from email.message import EmailMessage
 from pathlib import Path
 
-from fastapi import Cookie, FastAPI, File, HTTPException, Response, UploadFile
+from fastapi import Cookie, FastAPI, File, HTTPException, Response, UploadFile, Request
 from fastapi.responses import FileResponse, Response as RawResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -39,11 +39,16 @@ f"""CREATE TABLE IF NOT EXISTS notification_preferences(user_id INTEGER PRIMARY 
 def init_db():
     with engine.begin() as db:
         for s in SCHEMA: db.execute(text(s))
-        for q in [
+        queries = [
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS plan VARCHAR(20) DEFAULT 'free'",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(255)"
-        ]:
+        ] if is_pg else [
+            "ALTER TABLE users ADD COLUMN email VARCHAR(255)",
+            "ALTER TABLE users ADD COLUMN plan VARCHAR(20) DEFAULT 'free'",
+            "ALTER TABLE users ADD COLUMN stripe_customer_id VARCHAR(255)"
+        ]
+        for q in queries:
             try: db.execute(text(q))
             except Exception: pass
 
@@ -181,6 +186,37 @@ async def billing_checkout(lifeos_session:str|None=Cookie(default=None)):
     async with httpx.AsyncClient(timeout=20) as client: r=await client.post("https://api.stripe.com/v1/checkout/sessions",data=data,auth=(key,""))
     if r.status_code>=400: raise HTTPException(502,"Stripe checkout could not be created.")
     track("checkout_started",u["id"],"/pricing"); return {"url":r.json()["url"]}
+
+
+@app.post("/api/billing/webhook")
+async def billing_webhook(request:Request):
+    secret=os.getenv("STRIPE_WEBHOOK_SECRET")
+    if not secret: raise HTTPException(503,"Webhook is not configured.")
+    payload=(await request.body()).decode()
+    sig=request.headers.get("stripe-signature","")
+    import hmac,hashlib,time
+    parts=dict(x.split("=",1) for x in sig.split(",") if "=" in x)
+    ts=parts.get("t"); v1=parts.get("v1")
+    if not ts or not v1 or abs(int(time.time())-int(ts))>300: raise HTTPException(400,"Invalid signature.")
+    expected=hmac.new(secret.encode(),f"{ts}.{payload}".encode(),hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected,v1): raise HTTPException(400,"Invalid signature.")
+    event=json.loads(payload); obj=event.get("data",{}).get("object",{}); typ=event.get("type","")
+    uid=(obj.get("metadata") or {}).get("user_id")
+    if typ=="checkout.session.completed" and uid:
+        sub=obj.get("subscription")
+        with engine.begin() as db:
+            db.execute(text("UPDATE users SET plan='pro',stripe_customer_id=:c WHERE id=:u"),{"c":obj.get("customer"),"u":int(uid)})
+            if sub:
+                if is_pg:
+                    db.execute(text("INSERT INTO subscriptions(user_id,stripe_subscription_id,status) VALUES(:u,:s,'active') ON CONFLICT(stripe_subscription_id) DO UPDATE SET status='active'"),{"u":int(uid),"s":sub})
+                else:
+                    db.execute(text("INSERT OR IGNORE INTO subscriptions(user_id,stripe_subscription_id,status) VALUES(:u,:s,'active')"),{"u":int(uid),"s":sub})
+    elif typ=="customer.subscription.deleted":
+        subid=obj.get("id")
+        with engine.begin() as db:
+            db.execute(text("UPDATE subscriptions SET status='canceled' WHERE stripe_subscription_id=:i"),{"i":subid})
+            db.execute(text("UPDATE users SET plan='free' WHERE id=(SELECT user_id FROM subscriptions WHERE stripe_subscription_id=:i)"),{"i":subid})
+    return {"received":True}
 
 @app.get("/robots.txt")
 def robots():
