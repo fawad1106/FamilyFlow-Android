@@ -92,6 +92,10 @@ async def lifespan(app): init_db(); yield
 app=FastAPI(title="LifeOS",version="2.0.0",lifespan=lifespan)
 app.mount("/css",StaticFiles(directory=FRONT/"css"),name="css"); app.mount("/js",StaticFiles(directory=FRONT/"js"),name="js")
 
+@app.get("/google5874d0f26668ab6b.html")
+def google_verification():
+    return Response("google-site-verification: google5874d0f26668ab6b.html\\n", media_type="text/html")
+
 @app.get("/")
 def home(): return FileResponse(FRONT/"index.html")
 @app.get("/health")
