@@ -14,6 +14,7 @@ LifeOS is a personal command center for tasks, projects, notes, files, search, a
 - Persistent dark-mode preference
 - PostgreSQL support for production and SQLite fallback for local development
 - Railway healthcheck and Docker deployment configuration
+- Admin user-count panel visible only to the LifeOS admin account
 
 ## Local development
 ```bash
