@@ -175,9 +175,10 @@ def admin_analytics(x_key:str=""):
     return rows("SELECT event,COUNT(*) count FROM analytics_events GROUP BY event ORDER BY count DESC")
 
 @app.get("/api/admin/user-count")
-def admin_user_count(x_admin_key:str=Header(default="")):
-    key=os.getenv("ADMIN_ANALYTICS_KEY")
-    if not key or not hmac.compare_digest(x_admin_key, key): raise HTTPException(403,"Forbidden")
+def admin_user_count(lifeos_session:str|None=Cookie(default=None)):
+    u=need(lifeos_session)
+    if str(u.get("username","")).strip().casefold() != "fawad malik":
+        raise HTTPException(403,"Forbidden")
     with engine.connect() as db:
         total=db.execute(text("SELECT COUNT(*) FROM users")).scalar_one()
     return {"users":int(total)}
