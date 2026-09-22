@@ -183,6 +183,13 @@ def admin_user_count(lifeos_session:str|None=Cookie(default=None)):
         total=db.execute(text("SELECT COUNT(*) FROM users")).scalar_one()
     return {"users":int(total)}
 
+@app.get("/api/admin/users")
+def admin_users(lifeos_session:str|None=Cookie(default=None)):
+    u=need(lifeos_session)
+    if str(u.get("username","")).strip().casefold() != "fawad malik":
+        raise HTTPException(403,"Forbidden")
+    return rows("SELECT username FROM users ORDER BY id ASC")
+
 @app.get("/robots.txt")
 def robots():
     base=os.getenv("PUBLIC_BASE_URL","https://lifeos-nqn8-production.up.railway.app").rstrip("/")
