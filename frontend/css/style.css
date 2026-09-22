@@ -4,7 +4,8 @@ body { margin: 0; min-height: 100vh; }
 body.dark { color: #f5f5f5; background: #111; }
 button, input { font: inherit; }
 button { border: 1px solid #cfcfcf; border-radius: 8px; padding: 10px 14px; background: white; color: inherit; cursor: pointer; }
-button:hover { opacity: .85; }
+button:hover:not(:disabled) { opacity: .85; }
+button:disabled { cursor: default; opacity: .8; }
 body.dark button, body.dark input { background: #1d1d1d; border-color: #444; color: inherit; }
 input { width: 100%; border: 1px solid #cfcfcf; border-radius: 8px; padding: 10px 12px; background: white; color: #171717; }
 .app { width: min(1100px, calc(100% - 32px)); margin: auto; padding: 32px 0 60px; }
@@ -28,6 +29,9 @@ body.dark .card { border-color: #333; background: #181818; }
 .task-item { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid #e1e1e1; border-radius: 10px; }
 body.dark .task-item { border-color: #333; }
 .task-item span { flex: 1; }
+.task-item.completed span { text-decoration: line-through; opacity: .55; }
+.task-check { min-width: 40px; padding: 6px 10px; }
+.delete-task { padding: 6px 10px; }
 .error { color: #b42318; margin: 12px 0 0; }
 body.dark .error { color: #ff8a80; }
 .activity { margin-top: 16px; }
