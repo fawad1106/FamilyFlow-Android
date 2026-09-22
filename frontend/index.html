@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#111827">
-<meta name="description" content="LifeOS is your simple personal command center for tasks, projects, notes and files.">
+<meta name="description" content="LifeOS is a personal command center for tasks, projects, notes and files. Organize your day in one calm workspace."><meta name="robots" content="index,follow"><link rel="canonical" href="https://lifeos-nqn8-production.up.railway.app/"><script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"LifeOS","applicationCategory":"ProductivityApplication","operatingSystem":"Web, Android","description":"Personal command center for tasks, projects, notes and files."}</script>
 <title>LifeOS — Your personal command center</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="/css/style.css">
@@ -17,18 +17,18 @@
     <div class="hero-panel"><div class="window-top"><i></i><i></i><i></i></div><div class="mini-grid"><div><small>Today</small><strong>12 tasks</strong></div><div><small>Projects</small><strong>4 active</strong></div><div class="wide"><small>Focus</small><strong>Build something great</strong><div class="progress"><span></span></div></div></div></div>
   </section>
   <section class="features"><div><b>✓ Tasks</b><p>Turn plans into clear next actions.</p></div><div><b>◈ Projects</b><p>Keep bigger goals organized.</p></div><div><b>✎ Notes</b><p>Capture ideas before they disappear.</p></div><div><b>↥ Files</b><p>Keep useful documents close by.</p></div></section>
-  <footer>LifeOS · A calmer way to get things done.</footer>
+  <section class="pricing-preview"><span class="eyebrow">SIMPLE PRICING</span><h2>Start free. Upgrade when you need more.</h2><div class="pricing-cards"><div><b>Free</b><strong>$0</strong><p>Tasks, projects, notes, files and core workspace tools.</p></div><div><b>Pro</b><strong>$6<span>/mo</span></strong><p>Advanced product features and priority workspace capabilities.</p><button type="button" id="pricingStart" class="primary">See Pro options</button></div></div></section><footer>LifeOS · A calmer way to get things done. · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/pricing">Pricing</a></footer>
 </div>
 <div id="auth" hidden>
   <div class="authcard"><button type="button" id="backLanding" class="back">← Back</button><b class="brand">Life<span>OS</span></b><h1 id="authTitle">Welcome back</h1><p id="authSubtitle" class="muted">Log in to continue to your workspace.</p>
-  <form id="authform"><label>Username<input id="user" autocomplete="username" placeholder="Your username" minlength="3" required></label><label>Password<input id="pass" autocomplete="current-password" type="password" placeholder="At least 8 characters" minlength="8" required></label><button id="authSubmit" class="primary">Log in</button></form>
+  <form id="authform"><label>Username<input id="user" autocomplete="username" placeholder="Your username" minlength="3" required></label><label id="emailLabel" hidden>Email<input id="email" autocomplete="email" type="email" placeholder="you@example.com"></label><label>Password<input id="pass" autocomplete="current-password" type="password" placeholder="At least 8 characters" minlength="8" required></label><button id="authSubmit" class="primary">Log in</button></form>
   <button type="button" id="switch" class="link">Need an account? Register</button><p id="aerr" class="err"></p></div>
 </div>
 <div id="app" hidden>
   <aside><div class="brand sidebrand">Life<span>OS</span></div><div class="workspace"><small>WORKSPACE</small><b>My Life</b></div>
-  <button type="button" class="nav active" data-v="dashboard"><span>⌂</span>Dashboard</button><button type="button" class="nav" data-v="tasks"><span>✓</span>Tasks</button><button type="button" class="nav" data-v="projects"><span>◈</span>Projects</button><button type="button" class="nav" data-v="notes"><span>✎</span>Notes</button><button type="button" class="nav" data-v="files"><span>↥</span>Files</button>
-  <div class="side-bottom"><button type="button" id="theme" class="side-action">☾ <span>Appearance</span></button><button type="button" id="logout" class="side-action">↪ <span>Log out</span></button></div></aside>
-  <main><header><div><small id="kicker">OVERVIEW</small><h1 id="title">Dashboard</h1></div><div class="tools"><label class="search"><span>⌕</span><input id="search" aria-label="Search everything" placeholder="Search everything…"></label></div></header><section id="content"></section></main>
+  <button type="button" class="nav active" data-v="dashboard"><span>⌂</span>Dashboard</button><button type="button" class="nav" data-v="tasks"><span>✓</span>Tasks</button><button type="button" class="nav" data-v="projects"><span>◈</span>Projects</button><button type="button" class="nav" data-v="notes"><span>✎</span>Notes</button><button type="button" class="nav" data-v="files"><span>↥</span>Files</button><button type="button" class="nav" data-v="settings"><span>⚙</span>Settings</button>
+  <div class="side-bottom"><button type="button" id="theme" class="side-action">☾ <span>Appearance</span></button><button type="button" id="upgrade" class="side-action">★ <span>Upgrade to Pro</span></button><button type="button" id="logout" class="side-action">↪ <span>Log out</span></button></div></aside>
+  <main><header><div><small id="kicker">OVERVIEW</small><h1 id="title">Dashboard</h1></div><div class="tools"><span id="planBadge" class="tag">Free</span><label class="search"><span>⌕</span><input id="search" aria-label="Search everything" placeholder="Search everything…"></label></div></header><section id="content"></section></main>
 </div>
 <script src="/js/main.js"></script>
 </body></html>
