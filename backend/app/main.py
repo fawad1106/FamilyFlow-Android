@@ -32,7 +32,6 @@ f"""CREATE TABLE IF NOT EXISTS projects(id {ID},name VARCHAR(120) NOT NULL,descr
 f"""CREATE TABLE IF NOT EXISTS tasks(id {ID},title VARCHAR(200) NOT NULL,completed BOOLEAN DEFAULT FALSE,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,due_date VARCHAR(32),user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,tags TEXT DEFAULT '')""",
 f"""CREATE TABLE IF NOT EXISTS notes(id {ID},title VARCHAR(200) NOT NULL,content TEXT DEFAULT '',tags TEXT DEFAULT '',project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""",
 f"""CREATE TABLE IF NOT EXISTS files(id {ID},name VARCHAR(255) NOT NULL,content_type VARCHAR(150) DEFAULT 'application/octet-stream',data {BINARY} NOT NULL,size INTEGER DEFAULT 0,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""",
-f"""CREATE TABLE IF NOT EXISTS subscriptions(id {ID},user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,stripe_subscription_id VARCHAR(255) UNIQUE,status VARCHAR(40),current_period_end TIMESTAMP,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""",
 f"""CREATE TABLE IF NOT EXISTS analytics_events(id {ID},user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,event VARCHAR(120) NOT NULL,path VARCHAR(255),metadata TEXT DEFAULT '',created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""",
 f"""CREATE TABLE IF NOT EXISTS notification_preferences(user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,due_task_email BOOLEAN DEFAULT TRUE,marketing_email BOOLEAN DEFAULT FALSE)"""
 ]
@@ -147,8 +146,8 @@ def track(event, uid=None, path=""):
 @app.get("/api/settings")
 def get_settings(lifeos_session:str|None=Cookie(default=None)):
     u=need(lifeos_session); pref=rows("SELECT * FROM notification_preferences WHERE user_id=:u",{"u":u["id"]})
-    usr=rows("SELECT email,plan FROM users WHERE id=:u",{"u":u["id"]})[0]; p=pref[0] if pref else {"due_task_email":True,"marketing_email":False}
-    return {"email":usr["email"],"plan":usr["plan"] or "free","due_task_email":bool(p["due_task_email"]),"marketing_email":bool(p["marketing_email"])}
+    usr=rows("SELECT email FROM users WHERE id=:u",{"u":u["id"]})[0]; p=pref[0] if pref else {"due_task_email":True,"marketing_email":False}
+    return {"email":usr["email"],"due_task_email":bool(p["due_task_email"]),"marketing_email":bool(p["marketing_email"])}
 
 @app.patch("/api/settings")
 def update_settings(x:SettingsIn,lifeos_session:str|None=Cookie(default=None)):
@@ -190,7 +189,7 @@ def seo_page(title,heading,body):
 @app.get("/privacy")
 def privacy_page(): return seo_page("Privacy","LifeOS privacy","<p>LifeOS stores the account and workspace data needed to provide the service. Product analytics are first-party events.</p>")
 @app.get("/terms")
-def terms_page(): return seo_page("Terms","LifeOS terms","<p>Use LifeOS responsibly and only upload content you are allowed to store. Features and pricing may change.</p>")
+def terms_page(): return seo_page("Terms","LifeOS terms","<p>Use LifeOS responsibly and only upload content you are allowed to store. Features may change.</p>")
 
 @app.get("/api/notifications/run")
 def run_notifications(secret:str=""):
