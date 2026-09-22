@@ -122,9 +122,15 @@ def login(x:Cred,response:Response):
     name=x.username.strip().lower()
     with engine.connect() as db:u=db.execute(text("SELECT * FROM users WHERE username=:n"),{"n":name}).mappings().first()
     if not u or not pcheck(x.password,u["password_hash"]):
-        with engine.begin() as db: db.execute(text("INSERT INTO login_attempts(username,success) VALUES(:n,FALSE)"),{"n":name})
+        try:
+            with engine.begin() as db: db.execute(text("INSERT INTO login_attempts(username,success) VALUES(:n,FALSE)"),{"n":name})
+        except Exception:
+            pass
         raise HTTPException(401,"Invalid username or password.")
-    with engine.begin() as db: db.execute(text("INSERT INTO login_attempts(username,success) VALUES(:n,TRUE)"),{"n":name})
+    try:
+        with engine.begin() as db: db.execute(text("INSERT INTO login_attempts(username,success) VALUES(:n,TRUE)"),{"n":name})
+    except Exception:
+        pass
     response.set_cookie("lifeos_session",session(u["id"]),httponly=True,samesite="lax",secure=url.startswith("postgres"),max_age=2592000)
     return {"id":u["id"],"username":u["username"]}
 
@@ -204,8 +210,12 @@ def admin_overview(lifeos_session:str|None=Cookie(default=None)):
     for table,key in [("tasks","tasks"),("projects","projects"),("notes","notes"),("files","files")]:
         workspace[key]=count(f"SELECT COUNT(*) n FROM {table}")
     workspace["completed_tasks"]=count("SELECT COUNT(*) n FROM tasks WHERE completed=TRUE")
-    login_24h=count("SELECT COUNT(*) n FROM login_attempts WHERE created_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'" if is_pg else "SELECT COUNT(*) n FROM login_attempts WHERE created_at >= datetime('now','-24 hours')")
-    failed_24h=count("SELECT COUNT(*) n FROM login_attempts WHERE success=FALSE AND created_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'" if is_pg else "SELECT COUNT(*) n FROM login_attempts WHERE success=0 AND created_at >= datetime('now','-24 hours')")
+    try:
+        login_24h=count("SELECT COUNT(*) n FROM login_attempts WHERE created_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'" if is_pg else "SELECT COUNT(*) n FROM login_attempts WHERE created_at >= datetime('now','-24 hours')")
+        failed_24h=count("SELECT COUNT(*) n FROM login_attempts WHERE success=FALSE AND created_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'" if is_pg else "SELECT COUNT(*) n FROM login_attempts WHERE success=0 AND created_at >= datetime('now','-24 hours')")
+    except Exception:
+        login_24h=0
+        failed_24h=0
     events_24h=count("SELECT COUNT(*) n FROM analytics_events WHERE created_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'" if is_pg else "SELECT COUNT(*) n FROM analytics_events WHERE created_at >= datetime('now','-24 hours')")
     due_today=count("""SELECT COUNT(*) n FROM tasks t JOIN users u ON u.id=t.user_id LEFT JOIN notification_preferences p ON p.user_id=u.id WHERE t.completed=FALSE AND t.due_date=:d AND u.email IS NOT NULL AND COALESCE(p.due_task_email,TRUE)=TRUE""",{"d":today})
     growth_rows=rows("SELECT DATE(created_at) day,COUNT(*) n FROM users WHERE created_at >= CURRENT_TIMESTAMP - INTERVAL '14 days' GROUP BY DATE(created_at) ORDER BY day" if is_pg else "SELECT DATE(created_at) day,COUNT(*) n FROM users WHERE created_at >= datetime('now','-14 days') GROUP BY DATE(created_at) ORDER BY day")
