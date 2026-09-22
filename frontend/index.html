@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LifeOS</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<main class="app">
+<header class="topbar">
+<div><p class="eyebrow">PERSONAL COMMAND CENTER</p><h1>LifeOS</h1></div>
+<button id="theme-button" type="button">Toggle theme</button>
+</header>
+<section class="hero"><p class="eyebrow">TODAY</p><h2>What matters right now?</h2><p class="muted">Keep the important things in one place.</p></section>
+<section class="card task-panel">
+<div class="card-heading"><div><p class="eyebrow">TASKS</p><h3>Things to do</h3></div><span id="task-count">0</span></div>
+<form id="task-form" class="task-form">
+<input id="task-title" type="text" maxlength="200" placeholder="What needs to be done?" autocomplete="off" required>
+<input id="task-due" type="date" aria-label="Due date">
+<button type="submit">Add task</button>
+</form>
+<p id="task-error" class="error" hidden></p>
+<ul id="task-list" class="task-list"></ul>
+<p id="empty-tasks" class="muted">No tasks yet. Add your first one.</p>
+</section>
+<section class="grid">
+<article class="card"><div class="card-heading"><h3>Projects</h3><span>0</span></div><p class="muted">Projects will connect to tasks soon.</p></article>
+<article class="card"><div class="card-heading"><h3>Notes</h3><span>0</span></div><p class="muted">Your knowledge starts here.</p></article>
+</section>
+<section class="activity card"><h3>Activity</h3><p id="activity-message" class="muted">LifeOS is connected to your task database.</p></section>
+</main>
+<script src="/js/main.js"></script>
+</body>
+</html>
