@@ -1,39 +1,18 @@
-const taskForm=document.querySelector("#task-form");
-const taskTitle=document.querySelector("#task-title");
-const taskDue=document.querySelector("#task-due");
-const taskList=document.querySelector("#task-list");
-const taskCount=document.querySelector("#task-count");
-const emptyTasks=document.querySelector("#empty-tasks");
-const taskError=document.querySelector("#task-error");
-const activity=document.querySelector("#activity-message");
-
-function showError(message){taskError.textContent=message;taskError.hidden=false}
-function clearError(){taskError.hidden=true;taskError.textContent=""}
-function formatDue(date){if(!date)return ""; const d=new Date(date+"T00:00:00"); return d.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})}
-
-function renderTasks(tasks){
- taskList.replaceChildren(); taskCount.textContent=tasks.length; emptyTasks.hidden=tasks.length!==0;
- for(const task of tasks){
-  const item=document.createElement("li"); item.className="task-item"; if(task.completed)item.classList.add("completed");
-  const check=document.createElement("button"); check.type="button"; check.className="task-check"; check.textContent=task.completed?"✓":"○"; check.disabled=task.completed; check.onclick=()=>completeTask(task.id);
-  const content=document.createElement("div"); content.className="task-content";
-  const title=document.createElement("span"); title.className="task-title"; title.textContent=task.title;
-  content.appendChild(title);
-  if(task.due_date){const due=document.createElement("small"); due.className="task-due"; due.textContent="Due "+formatDue(task.due_date); content.appendChild(due)}
-  const edit=document.createElement("button"); edit.type="button"; edit.textContent="Edit"; edit.className="edit-task"; edit.onclick=()=>editTask(task);
-  const del=document.createElement("button"); del.type="button"; del.textContent="Delete"; del.className="delete-task"; del.onclick=()=>deleteTask(task.id);
-  item.append(check,content,edit,del); taskList.appendChild(item);
- }
-}
-async function loadTasks(){clearError();try{const r=await fetch("/api/tasks");if(!r.ok)throw Error("Could not load tasks.");renderTasks(await r.json())}catch(e){showError(e.message)}}
-async function completeTask(id){clearError();try{const r=await fetch("/api/tasks/"+id+"/complete",{method:"PATCH"});if(!r.ok)throw Error("Could not complete task.");activity.textContent="Task completed.";await loadTasks()}catch(e){showError(e.message)}}
-async function deleteTask(id){clearError();try{const r=await fetch("/api/tasks/"+id,{method:"DELETE"});if(!r.ok)throw Error("Could not delete task.");activity.textContent="Task deleted.";await loadTasks()}catch(e){showError(e.message)}}
-async function editTask(task){
- const title=prompt("Edit task title:",task.title); if(title===null)return;
- const clean=title.trim(); if(!clean){showError("Task title cannot be empty.");return}
- const due=prompt("Due date (YYYY-MM-DD), or leave blank:",task.due_date||""); if(due===null)return;
- try{const r=await fetch("/api/tasks/"+task.id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({title:clean,due_date:due.trim()||null})});if(!r.ok){const d=await r.json().catch(()=>({}));throw Error(d.detail||"Could not update task.")}activity.textContent="Task updated.";await loadTasks()}catch(e){showError(e.message)}
-}
-taskForm.addEventListener("submit",async e=>{e.preventDefault();clearError();const title=taskTitle.value.trim();if(!title)return;try{const r=await fetch("/api/tasks",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({title,due_date:taskDue.value||null})});if(!r.ok){const d=await r.json().catch(()=>({}));throw Error(d.detail||"Could not create task.")}taskForm.reset();activity.textContent="Task added.";await loadTasks();taskTitle.focus()}catch(e){showError(e.message)}});
-document.querySelector("#theme-button").onclick=()=>document.body.classList.toggle("dark");
-loadTasks();
+const $=s=>document.querySelector(s),esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));let reg=false,view="dashboard";
+async function api(u,o={}){let r=await fetch(u,{credentials:"same-origin",...o});if(!r.ok){let d=await r.json().catch(()=>({}));throw Error(d.detail||"Request failed")}return r.status===204?null:r.json()}
+async function boot(){try{await api("/api/auth/me");$("#auth").hidden=true;$("#app").hidden=false;render(view)}catch{}}
+$("#authform").onsubmit=async e=>{e.preventDefault();$("#aerr").textContent="";try{await api(reg?"/api/auth/register":"/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:$("#user").value,password:$("#pass").value})});$("#auth").hidden=true;$("#app").hidden=false;render(view)}catch(x){$("#aerr").textContent=x.message}};
+$("#switch").onclick=()=>{reg=!reg;$("#authform button").textContent=reg?"Register":"Log in";$("#switch").textContent=reg?"Already have an account? Log in":"Need an account? Register"};
+$("#logout").onclick=async()=>{await api("/api/auth/logout",{method:"POST"});location.reload()};$("#theme").onclick=()=>document.body.classList.toggle("dark");
+document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav").forEach(x=>x.classList.remove("active"));b.classList.add("active");render(b.dataset.v)});
+$("#search").oninput=async e=>{let q=e.target.value.trim();if(!q){render(view);return}let r=await api("/api/search?q="+encodeURIComponent(q));$("#content").innerHTML='<div class="card"><h2>Search results</h2><div class="list">'+(r.map(x=>'<div class="row"><div class="grow"><b>'+esc(x.title)+'</b><small>'+x.type+'</small></div></div>').join("")||'<div class="empty muted">Nothing found.</div>')+'</div></div>'};
+function render(v){view=v;$("#title").textContent=v[0].toUpperCase()+v.slice(1);$("#kicker").textContent=v==="dashboard"?"OVERVIEW":v.toUpperCase();({dashboard,tasks,projects,notes,files}[v])()}
+async function dashboard(){let s=await api("/api/dashboard/stats");$("#content").innerHTML='<div class="cards">'+[['Tasks',s.tasks],['Completed',s.completed_tasks],['Projects',s.projects],['Notes',s.notes]].map(a=>'<div class="card"><span class="muted">'+a[0]+'</span><div class="stat">'+a[1]+'</div></div>').join("")+'</div><div class="card" style="margin-top:14px"><h2>What matters right now?</h2><p class="muted">Tasks, projects, notes and files are connected in one workspace.</p></div>'}
+async function tasks(){let [ts,ps]=await Promise.all([api("/api/tasks"),api("/api/projects")]);$("#content").innerHTML='<div class="card"><form id="tf" class="form"><input id="tt" placeholder="Task title" required><div class="grid2"><input id="td" type="date"><input id="tg" placeholder="Tags, comma separated"></div><select id="tp"><option value="">No project</option>'+ps.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("")+'</select><button class="primary">Add task</button></form><div class="list">'+(ts.map(t=>'<div class="row"><button class="soft" onclick="doneTask('+t.id+')">'+(t.completed?"✓":"○")+'</button><div class="grow '+(t.completed?"done":"")+'"><b>'+esc(t.title)+'</b><small>'+(t.due_date?"Due "+esc(t.due_date):"No due date")+(t.tags?" · "+esc(t.tags):"")+'</small></div><button class="soft" onclick="editTask('+t.id+')">Edit</button><button class="danger" onclick="deleteTask('+t.id+')">Delete</button></div>').join("")||'<div class="empty muted">No tasks yet.</div>')+'</div></div>';$("#tf").onsubmit=async e=>{e.preventDefault();await api("/api/tasks",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({title:$("#tt").value,due_date:$("#td").value||null,tags:$("#tg").value,project_id:$("#tp").value?+$("#tp").value:null})});tasks()}}
+async function doneTask(id){await api("/api/tasks/"+id+"/complete",{method:"PATCH"});tasks()}async function deleteTask(id){await api("/api/tasks/"+id,{method:"DELETE"});tasks()}async function editTask(id){let ts=await api("/api/tasks"),t=ts.find(x=>x.id===id),title=prompt("Task title",t.title);if(title===null)return;let due=prompt("Due date YYYY-MM-DD",t.due_date||"");if(due===null)return;await api("/api/tasks/"+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({title,due_date:due||null,tags:t.tags,project_id:t.project_id})});tasks()}
+async function projects(){let ps=await api("/api/projects");$("#content").innerHTML='<div class="card"><form id="pf" class="form"><input id="pn" placeholder="Project name" required><textarea id="pd" placeholder="Description"></textarea><input id="pc" placeholder="Color label"><button class="primary">Create project</button></form><div class="list">'+(ps.map(p=>'<div class="row"><div class="grow"><b>'+esc(p.name)+'</b><small>'+esc(p.description)+' · '+p.done_count+'/'+p.task_count+' complete</small></div><button class="danger" onclick="deleteProject('+p.id+')">Delete</button></div>').join("")||'<div class="empty muted">No projects yet.</div>')+'</div></div>';$("#pf").onsubmit=async e=>{e.preventDefault();await api("/api/projects",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:$("#pn").value,description:$("#pd").value,color:$("#pc").value})});projects()}}
+async function deleteProject(id){await api("/api/projects/"+id,{method:"DELETE"});projects()}
+async function notes(){let ns=await api("/api/notes");$("#content").innerHTML='<div class="card"><form id="nf" class="form"><input id="nt" placeholder="Note title" required><textarea id="nc" placeholder="Write your note..."></textarea><input id="ng" placeholder="Tags, comma separated"><button class="primary">Save note</button></form><div class="list">'+(ns.map(n=>'<div class="row"><div class="grow"><b>'+esc(n.title)+'</b><small>'+esc(n.content).slice(0,200)+(n.tags?" · "+esc(n.tags):"")+'</small></div><button class="danger" onclick="deleteNote('+n.id+')">Delete</button></div>').join("")||'<div class="empty muted">No notes yet.</div>')+'</div></div>';$("#nf").onsubmit=async e=>{e.preventDefault();await api("/api/notes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({title:$("#nt").value,content:$("#nc").value,tags:$("#ng").value})});notes()}}
+async function deleteNote(id){await api("/api/notes/"+id,{method:"DELETE"});notes()}
+async function files(){let fs=await api("/api/files");$("#content").innerHTML='<div class="card"><form id="ff" class="form"><input id="fi" type="file" required><button class="primary">Upload</button></form><div class="list">'+(fs.map(f=>'<div class="row"><div class="grow"><b>'+esc(f.name)+'</b><small>'+f.size+' bytes</small></div><a href="/api/files/'+f.id+'">Open</a><button class="danger" onclick="deleteFile('+f.id+')">Delete</button></div>').join("")||'<div class="empty muted">No files yet.</div>')+'</div></div>';$("#ff").onsubmit=async e=>{e.preventDefault();let fd=new FormData();fd.append("file",$("#fi").files[0]);await api("/api/files",{method:"POST",body:fd});files()}}
+async function deleteFile(id){await api("/api/files/"+id,{method:"DELETE"});files()}boot();
