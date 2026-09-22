@@ -7,7 +7,7 @@ import smtplib
 from email.message import EmailMessage
 from pathlib import Path
 
-from fastapi import Cookie, FastAPI, File, HTTPException, Response, UploadFile, Request
+from fastapi import Cookie, FastAPI, File, HTTPException, Response, UploadFile, Request, Header
 from fastapi.responses import FileResponse, Response as RawResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -132,7 +132,6 @@ def logout(response:Response,lifeos_session:str|None=Cookie(default=None)):
 @app.get("/api/auth/me")
 def me(lifeos_session:str|None=Cookie(default=None)):return dict(need(lifeos_session))
 
-
 def send_email(to, subject, body):
     host=os.getenv("SMTP_HOST")
     if not host or not to: return False
@@ -175,10 +174,18 @@ def admin_analytics(x_key:str=""):
     if not key or x_key != key: raise HTTPException(403,"Forbidden")
     return rows("SELECT event,COUNT(*) count FROM analytics_events GROUP BY event ORDER BY count DESC")
 
+@app.get("/api/admin/user-count")
+def admin_user_count(x_admin_key:str=Header(default="")):
+    key=os.getenv("ADMIN_ANALYTICS_KEY")
+    if not key or not hmac.compare_digest(x_admin_key, key): raise HTTPException(403,"Forbidden")
+    with engine.connect() as db:
+        total=db.execute(text("SELECT COUNT(*) FROM users")).scalar_one()
+    return {"users":int(total)}
+
 @app.get("/robots.txt")
 def robots():
     base=os.getenv("PUBLIC_BASE_URL","https://lifeos-nqn8-production.up.railway.app").rstrip("/")
-    return Response(f"User-agent: *\nAllow: /\nSitemap: {base}/sitemap.xml\n",media_type="text/plain")
+    return Response(f"User-agent: *\\nAllow: /\\nSitemap: {base}/sitemap.xml\\n",media_type="text/plain")
 
 @app.get("/sitemap.xml")
 def sitemap():
