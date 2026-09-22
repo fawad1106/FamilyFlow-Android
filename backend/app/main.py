@@ -33,7 +33,8 @@ f"""CREATE TABLE IF NOT EXISTS tasks(id {ID},title VARCHAR(200) NOT NULL,complet
 f"""CREATE TABLE IF NOT EXISTS notes(id {ID},title VARCHAR(200) NOT NULL,content TEXT DEFAULT '',tags TEXT DEFAULT '',project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""",
 f"""CREATE TABLE IF NOT EXISTS files(id {ID},name VARCHAR(255) NOT NULL,content_type VARCHAR(150) DEFAULT 'application/octet-stream',data {BINARY} NOT NULL,size INTEGER DEFAULT 0,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""",
 f"""CREATE TABLE IF NOT EXISTS analytics_events(id {ID},user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,event VARCHAR(120) NOT NULL,path VARCHAR(255),metadata TEXT DEFAULT '',created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""",
-f"""CREATE TABLE IF NOT EXISTS notification_preferences(user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,due_task_email BOOLEAN DEFAULT TRUE,marketing_email BOOLEAN DEFAULT FALSE)"""
+f"""CREATE TABLE IF NOT EXISTS notification_preferences(user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,due_task_email BOOLEAN DEFAULT TRUE,marketing_email BOOLEAN DEFAULT FALSE)""",
+f"""CREATE TABLE IF NOT EXISTS login_attempts(id {ID},username VARCHAR(40),success BOOLEAN NOT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""
 ]
 def init_db():
     with engine.begin() as db:
@@ -120,7 +121,10 @@ def register(x:Cred,response:Response):
 def login(x:Cred,response:Response):
     name=x.username.strip().lower()
     with engine.connect() as db:u=db.execute(text("SELECT * FROM users WHERE username=:n"),{"n":name}).mappings().first()
-    if not u or not pcheck(x.password,u["password_hash"]):raise HTTPException(401,"Invalid username or password.")
+    if not u or not pcheck(x.password,u["password_hash"]):
+        with engine.begin() as db: db.execute(text("INSERT INTO login_attempts(username,success) VALUES(:n,FALSE)"),{"n":name})
+        raise HTTPException(401,"Invalid username or password.")
+    with engine.begin() as db: db.execute(text("INSERT INTO login_attempts(username,success) VALUES(:n,TRUE)"),{"n":name})
     response.set_cookie("lifeos_session",session(u["id"]),httponly=True,samesite="lax",secure=url.startswith("postgres"),max_age=2592000)
     return {"id":u["id"],"username":u["username"]}
 
@@ -183,12 +187,32 @@ def admin_user_count(lifeos_session:str|None=Cookie(default=None)):
         total=db.execute(text("SELECT COUNT(*) FROM users")).scalar_one()
     return {"users":int(total)}
 
-@app.get("/api/admin/users")
-def admin_users(lifeos_session:str|None=Cookie(default=None)):
+@app.get("/api/admin/overview")
+def admin_overview(lifeos_session:str|None=Cookie(default=None)):
     u=need(lifeos_session)
     if str(u.get("username","")).strip().casefold() != "fawad malik":
         raise HTTPException(403,"Forbidden")
-    return rows("SELECT username FROM users ORDER BY id ASC")
+    now=datetime.utcnow()
+    today=now.date().isoformat()
+    def count(sql,p={}): return int(rows(sql,p)[0]["n"])
+    user_total=count("SELECT COUNT(*) n FROM users")
+    new_today=count("SELECT COUNT(*) n FROM users WHERE DATE(created_at)=:d",{"d":today})
+    new_7d=count("SELECT COUNT(*) n FROM users WHERE created_at >= CURRENT_TIMESTAMP - INTERVAL '7 days'" if is_pg else "SELECT COUNT(*) n FROM users WHERE created_at >= datetime('now','-7 days')")
+    new_30d=count("SELECT COUNT(*) n FROM users WHERE created_at >= CURRENT_TIMESTAMP - INTERVAL '30 days'" if is_pg else "SELECT COUNT(*) n FROM users WHERE created_at >= datetime('now','-30 days')")
+    active_24h=count("SELECT COUNT(DISTINCT user_id) n FROM sessions WHERE created_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'" if is_pg else "SELECT COUNT(DISTINCT user_id) n FROM sessions WHERE created_at >= datetime('now','-24 hours')")
+    workspace={}
+    for table,key in [("tasks","tasks"),("projects","projects"),("notes","notes"),("files","files")]:
+        workspace[key]=count(f"SELECT COUNT(*) n FROM {table}")
+    workspace["completed_tasks"]=count("SELECT COUNT(*) n FROM tasks WHERE completed=TRUE")
+    login_24h=count("SELECT COUNT(*) n FROM login_attempts WHERE created_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'" if is_pg else "SELECT COUNT(*) n FROM login_attempts WHERE created_at >= datetime('now','-24 hours')")
+    failed_24h=count("SELECT COUNT(*) n FROM login_attempts WHERE success=FALSE AND created_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'" if is_pg else "SELECT COUNT(*) n FROM login_attempts WHERE success=0 AND created_at >= datetime('now','-24 hours')")
+    events_24h=count("SELECT COUNT(*) n FROM analytics_events WHERE created_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'" if is_pg else "SELECT COUNT(*) n FROM analytics_events WHERE created_at >= datetime('now','-24 hours')")
+    due_today=count("""SELECT COUNT(*) n FROM tasks t JOIN users u ON u.id=t.user_id LEFT JOIN notification_preferences p ON p.user_id=u.id WHERE t.completed=FALSE AND t.due_date=:d AND u.email IS NOT NULL AND COALESCE(p.due_task_email,TRUE)=TRUE""",{"d":today})
+    growth_rows=rows("SELECT DATE(created_at) day,COUNT(*) n FROM users WHERE created_at >= CURRENT_TIMESTAMP - INTERVAL '14 days' GROUP BY DATE(created_at) ORDER BY day" if is_pg else "SELECT DATE(created_at) day,COUNT(*) n FROM users WHERE created_at >= datetime('now','-14 days') GROUP BY DATE(created_at) ORDER BY day")
+    growth={str(r["day"]):int(r["n"]) for r in growth_rows}
+    top_events=rows("SELECT event,COUNT(*) count FROM analytics_events WHERE created_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours' GROUP BY event ORDER BY count DESC LIMIT 8" if is_pg else "SELECT event,COUNT(*) count FROM analytics_events WHERE created_at >= datetime('now','-24 hours') GROUP BY event ORDER BY count DESC LIMIT 8")
+    return {"users":{"total":user_total,"new_today":new_today,"new_7d":new_7d,"new_30d":new_30d,"active_24h":active_24h,"growth_14d":growth},"workspace":workspace,"security":{"login_attempts_24h":login_24h,"failed_logins_24h":failed_24h,"active_sessions":count("SELECT COUNT(*) n FROM sessions")},"activity":{"events_24h":events_24h,"top_events":top_events},"email":{"smtp_configured":bool(os.getenv("SMTP_HOST")),"due_today":due_today},"system":{"database":"connected","version":"3.0.0"}}
+
 
 @app.get("/robots.txt")
 def robots():
