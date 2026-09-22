@@ -168,7 +168,8 @@ def analytics_event(data:dict,lifeos_session:str|None=Cookie(default=None)):
 
 @app.get("/api/admin/analytics")
 def admin_analytics(x_key:str=""):
-    if x_key != os.getenv("ADMIN_ANALYTICS_KEY",""): raise HTTPException(403,"Forbidden")
+    key=os.getenv("ADMIN_ANALYTICS_KEY")
+    if not key or x_key != key: raise HTTPException(403,"Forbidden")
     return rows("SELECT event,COUNT(*) count FROM analytics_events GROUP BY event ORDER BY count DESC")
 
 @app.get("/api/billing/status")
